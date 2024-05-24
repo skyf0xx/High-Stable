@@ -1,0 +1,19 @@
+# optional space/tab
+indent_style = space
+# if indent_style is space, this is valid
+indent_size = 2
+# if indent_style is tab, this is valid
+tab_width = 2
+# none/single/double
+quote_style = single
+# keep / always / same_line / replace_with_newline / never
+end_statement_with_semicolon = never
+
+continuation_indent = 2
+## extend option
+continuation_indent.before_block = 2
+continuation_indent.in_expr = 2
+continuation_indent.in_table = 2
+
+# option none / always / only_call_stmt
+align_chain_expr = always
