@@ -57,7 +57,7 @@ Variant = '0.0.3'
 
 -- token should be idempotent and not change previous state updates
 Denomination = Denomination or 12
-TotalSupply = TotalSupply or utils.toBalanceValue(10000 * 10 ^ Denomination)
+TotalSupply = TotalSupply or utils.toBalanceValue(500 * 10 ^ Denomination)
 Balances = Balances or { [ao.id] = TotalSupply }
 Name = Name or 'High Stable'
 Ticker = Ticker or 'HST'
