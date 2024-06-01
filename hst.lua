@@ -242,3 +242,20 @@ end)
 --[[
      Monetary Policy Handlers
    ]]
+--[[
+     Set the trusted Process that sets the policy
+   ]]
+--
+Handlers.add('setMonetaryPolicyProcess', Handlers.utils.hasMatchingTag('Action', 'SetMonetaryPolicyProcess'),
+  function(msg)
+    assert(MonetaryPolicyProcess == '', 'Monetary Policy Process has already been set!')
+
+    MonetaryPolicyProcess = msg.ProcessId
+    ao.send({
+      Target = msg.From,
+      Action = 'Set-Monetary-Policy-Process',
+      Data = Colors.gray ..
+        'Monetary Policy Process has been set to ' ..
+        Colors.blue .. msg.ProcessId .. Colors.reset
+    })
+  end)
