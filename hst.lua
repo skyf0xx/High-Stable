@@ -239,3 +239,6 @@ Handlers.add('burn', Handlers.utils.hasMatchingTag('Action', 'Burn'), function(m
     Data = Colors.gray .. 'Successfully burned ' .. Colors.blue .. msg.Quantity .. Colors.reset
   })
 end)
+--[[
+     Monetary Policy Handlers
+   ]]
