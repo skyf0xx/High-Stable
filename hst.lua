@@ -259,3 +259,27 @@ Handlers.add('setMonetaryPolicyProcess', Handlers.utils.hasMatchingTag('Action',
         Colors.blue .. msg.ProcessId .. Colors.reset
     })
   end)
+
+--[[
+     Handler for Rebasing the total supply
+   ]]
+--
+function Rebase (newSupply)
+  GonsPerToken = (bint(TotalGons) // bint(newSupply))
+end
+
+Handlers.add('rebase', Handlers.utils.hasMatchingTag('Action', 'Rebase'),
+  function(msg)
+    assert(MonetaryPolicyProcess ~= '', 'Monetary Policy Process has not been set!')
+    assert(MonetaryPolicyProcess == msg.From, 'Request is not from the trusted Monetary Policy Process!')
+
+    Rebase(msg.NewSupply)
+
+    ao.send({
+      Target = msg.From,
+      Action = 'Rebase',
+      Data = Colors.gray ..
+        'Total supply has been rebased to ' ..
+        Colors.blue .. msg.NewSupply .. Colors.reset
+    })
+  end)
