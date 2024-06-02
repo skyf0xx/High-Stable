@@ -125,7 +125,16 @@ end)
    ]]
 --
 Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
-  function(msg) ao.send({ Target = msg.From, Data = json.encode(Balances) }) end)
+  function(msg)
+    local HSTBalances = {}
+
+    for i = 1, #Balances do
+      local HSTBalance = utils.toBalanceValue((bint(Balances[i]) // GonsPerToken))
+      table.insert(HSTBalances, HSTBalance)
+    end
+
+    ao.send({ Target = msg.From, Data = json.encode(HSTBalances) })
+  end)
 
 --[[
      Transfer
