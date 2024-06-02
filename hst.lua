@@ -109,12 +109,14 @@ Handlers.add('balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), func
     bal = Balances[msg.From]
   end
 
+  local HSTBalance = utils.toBalanceValue((bint(bal) // GonsPerToken))
+
   ao.send({
     Target = msg.From,
-    Balance = bal,
+    Balance = HSTBalance,
     Ticker = Ticker,
     Account = msg.Tags.Recipient or msg.From,
-    Data = bal
+    Data = HSTBalance
   })
 end)
 
