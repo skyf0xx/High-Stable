@@ -250,8 +250,9 @@ Handlers.add('setMonetaryPolicyProcess', Handlers.utils.hasMatchingTag('Action',
      Handler for Rebasing the total supply
    ]]
 --
-function Rebase (newSupply)
+function Rebase(newSupply)
   GonsPerToken = (bint(TotalGons) // bint(newSupply))
+  return GonsPerToken
 end
 
 Handlers.add('rebase', Handlers.utils.hasMatchingTag('Action', 'Rebase'),
