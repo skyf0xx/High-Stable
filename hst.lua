@@ -57,8 +57,19 @@ Variant = '0.0.3'
 
 -- token should be idempotent and not change previous state updates
 Denomination = Denomination or 12
+--total HST supply (externally displayed balance)
 TotalSupply = TotalSupply or utils.toBalanceValue(5e14 * 10 ^ Denomination)
-Balances = Balances or { [ao.id] = TotalSupply }
+
+--[[
+    Internal balance calculation is handled in "gons"
+    TotalGons is a multiple of InitialSupply so that GonsPerToken is an integer.
+    Use the highest integer value for TotalGons for max granularity.
+   ]]
+TotalGons = utils.toBalanceValue(0x7FFFFFFFFFFFFFFF // bint(TotalSupply))
+GonsPerToken = GonsPerToken or Rebase(TotalSupply)
+
+Balances = Balances or { [ao.id] = TotalGons }
+
 Name = Name or 'High Stable'
 Ticker = Ticker or 'HST'
 Logo = Logo or 'SBCCXwwecBlDqRLUjb8dYABExTJXLieawf7m2aBJ-KY' --TODO: Update Logo
