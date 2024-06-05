@@ -228,7 +228,9 @@ Handlers.add('burn', Handlers.utils.hasMatchingTag('Action', 'Burn'), function(m
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
   assert(bint(msg.Quantity) <= bint(Balances[msg.From]), 'Quantity must be less than or equal to the current balance!')
 
-  Balances[msg.From] = utils.subtract(Balances[msg.From], msg.Quantity)
+  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
+
+  Balances[msg.From] = utils.subtract(Balances[msg.From], gonQuantity)
   TotalSupply = utils.subtract(TotalSupply, msg.Quantity)
 
   ao.send({
