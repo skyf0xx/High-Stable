@@ -58,6 +58,7 @@ Variant = '0.0.3'
 -- token should be idempotent and not change previous state updates
 Denomination = Denomination or 12
 --total HST supply (externally displayed balance)
+---@type string
 TotalSupply = TotalSupply or utils.toBalanceValue(5e14 * 10 ^ Denomination)
 
 --[[
@@ -65,7 +66,10 @@ TotalSupply = TotalSupply or utils.toBalanceValue(5e14 * 10 ^ Denomination)
     TotalGons is a multiple of InitialSupply so that GonsPerToken is an integer.
     Use the highest integer value for TotalGons for max granularity.
    ]]
+---@type string
 TotalGons = utils.toBalanceValue(0x7FFFFFFFFFFFFFFF // bint(TotalSupply))
+
+---@type integer
 GonsPerToken = GonsPerToken or Rebase(TotalSupply)
 
 Balances = Balances or { [ao.id] = TotalGons }
@@ -263,6 +267,8 @@ Handlers.add('setMonetaryPolicyProcess', Handlers.utils.hasMatchingTag('Action',
      Handler for Rebasing the total supply
    ]]
 --
+---@param newSupply string
+---@return number
 function Rebase(newSupply)
   GonsPerToken = (bint(TotalGons) // bint(newSupply))
   TotalSupply = newSupply
