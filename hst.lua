@@ -263,6 +263,8 @@ Handlers.add('setMonetaryPolicyProcess', Handlers.utils.hasMatchingTag('Action',
 --
 function Rebase(newSupply)
   GonsPerToken = (bint(TotalGons) // bint(newSupply))
+  TotalSupply = newSupply
+
   return GonsPerToken
 end
 
