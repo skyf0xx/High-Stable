@@ -148,9 +148,11 @@ Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), fu
   if not Balances[msg.From] then Balances[msg.From] = '0' end
   if not Balances[msg.Recipient] then Balances[msg.Recipient] = '0' end
 
-  if bint(msg.Quantity) <= bint(Balances[msg.From]) then
-    Balances[msg.From] = utils.subtract(Balances[msg.From], msg.Quantity)
-    Balances[msg.Recipient] = utils.add(Balances[msg.Recipient], msg.Quantity)
+  -- internal transfer is in gons
+  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
+  if bint(gonQuantity) <= bint(Balances[msg.From]) then
+    Balances[msg.From] = utils.subtract(Balances[msg.From], gonQuantity)
+    Balances[msg.Recipient] = utils.add(Balances[msg.Recipient], gonQuantity)
 
     --[[
          Only send the notifications to the Sender and Recipient
