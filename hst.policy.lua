@@ -13,6 +13,34 @@ local _AMM = '2bKo3vwB1Mo5TItmxuUQzZ11JgKauU_n2IZO1G13AIk'
 HighestLow = HighestLow or 0
 
 --[[
+     Add handlers to manaage monetary policy
+   ]]
+--
+
+--[[
+     Process Candles to get the highest low
+   ]]
+--
+Handlers.add('process-candles', Handlers.utils.hasMatchingTag('App-Name', 'Dexi'), function(msg)
+  assert(msg.From == _DEXI, 'Message originator is not trusted')
+  assert(msg.Tags['AMM'] == _AMM, 'This AMM is not monitored')
+  assert(msg.Tags['Payload'] == 'Candles', 'Payload is incorrect')
+
+  local candles = json.decode(msg.Data)
+
+  -- Ensure that the input data structure is correct
+  assert(type(candles) == 'table', 'Input must be a table')
+  assert(#candles >= 3, 'Candles must have at least 3 elements')
+  for _, element in ipairs(candles) do
+    assert(type(element) == 'table', 'Each element must be a table')
+    assert(element.low ~= nil, "Each element must have a 'low' key")
+  end
+
+  UpdateHighestLow(candles)
+end)
+
+
+--[[
      Get most recent candle information for HST
    ]]
 --
