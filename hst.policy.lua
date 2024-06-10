@@ -48,7 +48,7 @@ end)
      Get most recent candle information for HST
    ]]
 --
-Handlers.add('get-candles', Handlers.utils.hasMatchingTag('Action', 'Cron'), function(msg)
+Handlers.add('update-policy', Handlers.utils.hasMatchingTag('Action', 'Cron'), function(msg)
   ao.send({
     Target = _DEXI,
     Action = 'Get-Candles',
