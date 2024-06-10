@@ -21,28 +21,6 @@ CurrentSupply = CurrentSupply or 0
    ]]
 --
 
---[[
-     Process Candles to get the highest low
-   ]]
---
-Handlers.add('process-candles', Handlers.utils.hasMatchingTag('App-Name', 'Dexi'), function(msg)
-  assert(msg.From == _DEXI, 'Message originator is not trusted')
-  assert(msg.Tags['AMM'] == _AMM, 'This AMM is not monitored')
-  assert(msg.Tags['Payload'] == 'Candles', 'Payload is incorrect')
-
-  local candles = json.decode(msg.Data)
-
-  -- Ensure that the input data structure is correct
-  assert(type(candles) == 'table', 'Input must be a table')
-  assert(#candles >= 3, 'Candles must have at least 3 elements')
-  for _, element in ipairs(candles) do
-    assert(type(element) == 'table', 'Each element must be a table')
-    assert(element.low ~= nil, "Each element must have a 'low' key")
-  end
-
-  UpdateHighestLow(candles)
-end)
-
 
 --[[
      Get most recent candle information for HST
@@ -59,6 +37,35 @@ Handlers.add('update-policy', Handlers.utils.hasMatchingTag('Action', 'Cron'), f
 end)
 
 
+--[[
+     Process Candles to get the highest low
+   ]]
+--
+Handlers.add('process-candles',
+  Handlers.utils.hasMatchingTag('App-Name', 'Dexi') and Handlers.utils.hasMatchingTag('Payload', 'Candles'),
+  function(msg)
+    assert(msg.From == _DEXI, 'Message originator is not trusted')
+    assert(msg.Tags['AMM'] == _AMM, 'This AMM is not monitored')
+
+    local candles = json.decode(msg.Data)
+
+    -- Ensure that the input data structure is correct
+    assert(type(candles) == 'table', 'Input must be a table')
+    assert(#candles >= 3, 'Candles must have at least 3 elements')
+    for _, element in ipairs(candles) do
+      assert(type(element) == 'table', 'Each element must be a table')
+      assert(element.low ~= nil, "Each element must have a 'low' key")
+    end
+
+    UpdateHighestLow(candles)
+
+    -- Get the current price
+    ao.send({
+      Target = _DEXI,
+      Action = 'Get-Stats',
+      ['AMM'] = _AMM
+    })
+  end)
 --[[
   Get policy info
 ]]
