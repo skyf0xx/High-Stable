@@ -251,8 +251,6 @@ end)
 --
 Handlers.add('setMonetaryPolicyProcess', Handlers.utils.hasMatchingTag('Action', 'SetMonetaryPolicyProcess'),
   function(msg)
-    assert(MonetaryPolicyProcess == '', 'Monetary Policy Process has already been set!')
-
     MonetaryPolicyProcess = msg.ProcessId
     ao.send({
       Target = msg.From,
