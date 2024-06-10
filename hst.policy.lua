@@ -12,6 +12,10 @@ local _AMM = '2bKo3vwB1Mo5TItmxuUQzZ11JgKauU_n2IZO1G13AIk'
 ---@type number
 HighestLow = HighestLow or 0
 
+---@type number
+CurrentSupply = CurrentSupply or 0
+
+
 --[[
      Add handlers to manaage monetary policy
    ]]
@@ -53,6 +57,19 @@ Handlers.add('get-candles', Handlers.utils.hasMatchingTag('Action', 'Cron'), fun
     ['AMM'] = _AMM
   })
 end)
+
+
+--[[
+  Get policy info
+]]
+Handlers.add('info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
+  ao.send({
+    Target = msg.From,
+    HighestLow = tostring(HighestLow),
+    CurrentSupply = tostring(CurrentSupply)
+  })
+end)
+
 
 --[[
   Get the highest low from the daily candles
