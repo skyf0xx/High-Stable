@@ -26,7 +26,7 @@ CurrentSupply = CurrentSupply or 0
      Get most recent candle information for HST
    ]]
 --
-Handlers.add('update-policy', Handlers.utils.hasMatchingTag('Action', 'Cron'), function(msg)
+Handlers.add('cron', Handlers.utils.hasMatchingTag('Action', 'Cron'), function(msg)
   ao.send({
     Target = _DEXI,
     Action = 'Get-Candles',
