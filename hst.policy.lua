@@ -66,6 +66,27 @@ Handlers.add('process-candles',
       ['AMM'] = _AMM
     })
   end)
+
+
+--[[
+     Process the current stats (price)
+   ]]
+--
+Handlers.add('process-stats',
+  Handlers.utils.hasMatchingTag('App-Name', 'Dexi') and Handlers.utils.hasMatchingTag('Payload', 'Stats'),
+  function(msg)
+    assert(msg.From == _DEXI, 'Message originator is not trusted')
+    assert(msg.Tags['AMM'] == _AMM, 'This AMM is not monitored')
+
+    local price = tonumber(msg.Tags['Latest-Price'])
+
+    assert(price ~= nil, 'Invalid price: ' .. tostring(price))
+    assert(price > 0, 'Price must be greater than zero')
+
+    UpdatePolicy(price)
+  end)
+
+
 --[[
   Get policy info
 ]]
