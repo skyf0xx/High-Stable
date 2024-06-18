@@ -1,5 +1,6 @@
 local bint = require('.bint')(256)
 local ao = require('ao')
+local MonetaryPolicyProcess = 'Yw_ZVx8aQLi4Oc5j6ELMt5yzzizJzSOXHf7fg0fCORU'
 --[[
   This module implements the ao Standard Token Specification.
 
@@ -245,21 +246,6 @@ end)
 --[[
      Monetary Policy Handlers
    ]]
---[[
-     Set the trusted Process that sets the policy
-   ]]
---
-Handlers.add('setMonetaryPolicyProcess', Handlers.utils.hasMatchingTag('Action', 'SetMonetaryPolicyProcess'),
-  function(msg)
-    MonetaryPolicyProcess = msg.ProcessId
-    ao.send({
-      Target = msg.From,
-      Action = 'Set-Monetary-Policy-Process',
-      Data = Colors.gray ..
-        'Monetary Policy Process has been set to ' ..
-        Colors.blue .. msg.ProcessId .. Colors.reset
-    })
-  end)
 
 --[[
      Handler for Rebasing the total supply
@@ -276,7 +262,6 @@ end
 
 Handlers.add('rebase', Handlers.utils.hasMatchingTag('Action', 'Rebase'),
   function(msg)
-    assert(MonetaryPolicyProcess ~= '', 'Monetary Policy Process has not been set!')
     assert(MonetaryPolicyProcess == msg.From, 'Request is not from the trusted Monetary Policy Process!')
 
     Rebase(msg.NewSupply)
