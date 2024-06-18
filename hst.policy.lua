@@ -1,8 +1,10 @@
+local bint = require('.bint')(256)
 local ao = require('ao')
 local json = require('json')
 
 local _DEXI = 'jao0bfwk99iME8aK_TJLjm8H0bwaHzNuVbKRE1jArRo'
 local _AMM = '2bKo3vwB1Mo5TItmxuUQzZ11JgKauU_n2IZO1G13AIk'
+local _HighStable = '4CaeyAuNb7kRLiJBv6ij4uYmb5cHiu6r8lUUa9L7jxs'
 
 --[[
   This module gets the highest low and acts on the monetary policy for HST
@@ -15,6 +17,8 @@ HighestLow = HighestLow or 0
 ---@type number
 CurrentSupply = CurrentSupply or 0
 
+---@type number
+DaysToCorrect = DaysToCorrect or 7; -- number of days to distribute correction over
 
 --[[
      Add handlers to manaage monetary policy
@@ -83,8 +87,11 @@ Handlers.add('process-stats',
     assert(price ~= nil, 'Invalid price: ' .. tostring(price))
     assert(price > 0, 'Price must be greater than zero')
 
-    UpdatePolicy(price)
-  end)
+    if (price < HighestLow) then
+      UpdatePolicy(price)
+    end
+  end
+)
 
 
 --[[
@@ -117,5 +124,26 @@ function UpdateHighestLow(dailyCandles)
         HighestLow = curLow
       end
     end
+  end
+end
+
+--[[
+     Update the monetary policy (current supply)
+   ]]
+--
+
+---@param currentPrice number
+function UpdatePolicy(currentPrice)
+  local percentDelta = (HighestLow - currentPrice) / HighestLow
+  local dailyCorrection = percentDelta / DaysToCorrect
+
+  local newSupply = bint(math.floor((CurrentSupply * (1 - dailyCorrection))))
+  if (newSupply > 0) then
+    CurrentSupply = newSupply
+    ao.send({
+      Target = _HighStable,
+      Action = 'Rebase',
+      ['NewSupply'] = tostring(newSupply)
+    })
   end
 end
