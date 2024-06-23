@@ -2,9 +2,9 @@ local bint = require('.bint')(256)
 local ao = require('ao')
 local json = require('json')
 
-local _DEXI = 'jao0bfwk99iME8aK_TJLjm8H0bwaHzNuVbKRE1jArRo'
-local _AMM = '2bKo3vwB1Mo5TItmxuUQzZ11JgKauU_n2IZO1G13AIk'
-local _HighStable = '4CaeyAuNb7kRLiJBv6ij4uYmb5cHiu6r8lUUa9L7jxs'
+local _DEXIExchange = 'jao0bfwk99iME8aK_TJLjm8H0bwaHzNuVbKRE1jArRo'
+local _AMMPool = '2bKo3vwB1Mo5TItmxuUQzZ11JgKauU_n2IZO1G13AIk'
+local _HighStableProcess = '4CaeyAuNb7kRLiJBv6ij4uYmb5cHiu6r8lUUa9L7jxs'
 
 --[[
   This module gets the highest low and acts on the monetary policy for HST
@@ -32,11 +32,11 @@ DaysToCorrect = DaysToCorrect or 7; -- number of days to distribute correction o
 --
 Handlers.add('cron', Handlers.utils.hasMatchingTag('Action', 'Cron'), function(msg)
   ao.send({
-    Target = _DEXI,
+    Target = _DEXIExchange,
     Action = 'Get-Candles',
     ['Days'] = '4',
     ['Interval'] = '1d',
-    ['AMM'] = _AMM
+    ['AMM'] = _AMMPool
   })
 end)
 
@@ -48,8 +48,8 @@ end)
 Handlers.add('process-candles',
   Handlers.utils.hasMatchingTag('App-Name', 'Dexi') and Handlers.utils.hasMatchingTag('Payload', 'Candles'),
   function(msg)
-    assert(msg.From == _DEXI, 'Message originator is not trusted')
-    assert(msg.Tags['AMM'] == _AMM, 'This AMM is not monitored')
+    assert(msg.From == _DEXIExchange, 'Message originator is not trusted')
+    assert(msg.Tags['AMM'] == _AMMPool, 'This AMM is not monitored')
 
     local candles = json.decode(msg.Data)
 
@@ -65,9 +65,9 @@ Handlers.add('process-candles',
 
     -- Get the current price
     ao.send({
-      Target = _DEXI,
+      Target = _DEXIExchange,
       Action = 'Get-Stats',
-      ['AMM'] = _AMM
+      ['AMM'] = _AMMPool
     })
   end)
 
@@ -79,8 +79,8 @@ Handlers.add('process-candles',
 Handlers.add('process-stats',
   Handlers.utils.hasMatchingTag('App-Name', 'Dexi') and Handlers.utils.hasMatchingTag('Payload', 'Stats'),
   function(msg)
-    assert(msg.From == _DEXI, 'Message originator is not trusted')
-    assert(msg.Tags['AMM'] == _AMM, 'This AMM is not monitored')
+    assert(msg.From == _DEXIExchange, 'Message originator is not trusted')
+    assert(msg.Tags['AMM'] == _AMMPool, 'This AMM is not monitored')
 
     local price = tonumber(msg.Tags['Latest-Price'])
 
@@ -141,7 +141,7 @@ function UpdatePolicy(currentPrice)
   if (newSupply > 0) then
     CurrentSupply = newSupply
     ao.send({
-      Target = _HighStable,
+      Target = _HighStableProcess,
       Action = 'Rebase',
       ['NewSupply'] = tostring(newSupply)
     })
