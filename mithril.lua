@@ -58,7 +58,7 @@ Variant = '0.0.3'
 
 -- token should be idempotent and not change previous state updates
 Denomination = Denomination or 12
---total HST supply (externally displayed balance)
+--total MTH supply (externally displayed balance)
 ---@type string
 TotalSupply = TotalSupply or utils.toBalanceValue(5e14 * 10 ^ Denomination)
 
@@ -75,8 +75,8 @@ GonsPerToken = GonsPerToken or Rebase(TotalSupply)
 
 Balances = Balances or { [ao.id] = TotalGons }
 
-Name = Name or 'High Stable'
-Ticker = Ticker or 'HST'
+Name = Name or 'Mithril'
+Ticker = Ticker or 'MTH'
 Logo = Logo or 'SBCCXwwecBlDqRLUjb8dYABExTJXLieawf7m2aBJ-KY' --TODO: Update Logo
 
 --[[
@@ -114,14 +114,14 @@ Handlers.add('balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), func
     bal = Balances[msg.From]
   end
 
-  local HSTBalance = utils.toBalanceValue((bint(bal) // GonsPerToken))
+  local MTHBalance = utils.toBalanceValue((bint(bal) // GonsPerToken))
 
   ao.send({
     Target = msg.From,
-    Balance = HSTBalance,
+    Balance = MTHBalance,
     Ticker = Ticker,
     Account = msg.Tags.Recipient or msg.From,
-    Data = HSTBalance
+    Data = MTHBalance
   })
 end)
 
@@ -131,14 +131,14 @@ end)
 --
 Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
   function(msg)
-    local HSTBalances = {}
+    local MTHBalances = {}
 
     for i = 1, #Balances do
-      local HSTBalance = utils.toBalanceValue((bint(Balances[i]) // GonsPerToken))
-      table.insert(HSTBalances, HSTBalance)
+      local MTHBalance = utils.toBalanceValue((bint(Balances[i]) // GonsPerToken))
+      table.insert(MTHBalances, MTHBalance)
     end
 
-    ao.send({ Target = msg.From, Data = json.encode(HSTBalances) })
+    ao.send({ Target = msg.From, Data = json.encode(MTHBalances) })
   end)
 
 --[[
@@ -211,6 +211,35 @@ end)
 
 
 --[[
+    Mint
+   ]]
+--
+Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(msg)
+  assert(type(msg.Quantity) == 'string', 'Quantity is required!')
+  assert(bint(0) < bint(msg.Quantity), 'Quantity must be greater than zero!')
+
+  if not Balances[ao.id] then Balances[ao.id] = '0' end
+
+  if msg.From == ao.id then
+    -- Add tokens to the token pool, according to Quantity
+    Balances[msg.From] = utils.add(Balances[msg.From], msg.Quantity)
+    TotalSupply = utils.add(TotalSupply, msg.Quantity)
+    ao.send({
+      Target = msg.From,
+      Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
+    })
+  else
+    ao.send({
+      Target = msg.From,
+      Action = 'Mint-Error',
+      ['Message-Id'] = msg.Id,
+      Error = 'Only the Process Id can mint new ' .. Ticker .. ' tokens!'
+    })
+  end
+end)
+
+
+--[[
      Total Supply
    ]]
 --
@@ -274,3 +303,8 @@ Handlers.add('rebase', Handlers.utils.hasMatchingTag('Action', 'Rebase'),
         Colors.blue .. msg.NewSupply .. Colors.reset
     })
   end)
+
+
+--TODO: when selling to an exchange, add a fee and send it to minters
+--TODO: update mint function so it sends to an array of current stakers. The array has proportion of rewards
+--

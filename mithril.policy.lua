@@ -4,10 +4,10 @@ local json = require('json')
 
 local _DEXIExchange = 'jao0bfwk99iME8aK_TJLjm8H0bwaHzNuVbKRE1jArRo'
 local _AMMPool = '2bKo3vwB1Mo5TItmxuUQzZ11JgKauU_n2IZO1G13AIk'
-local _HighStableProcess = '4CaeyAuNb7kRLiJBv6ij4uYmb5cHiu6r8lUUa9L7jxs'
+local _MithrilProcess = '4CaeyAuNb7kRLiJBv6ij4uYmb5cHiu6r8lUUa9L7jxs'
 
 --[[
-  This module gets the highest low and acts on the monetary policy for HST
+  This module gets the highest low and acts on the monetary policy for MTH
 ]]
 --
 
@@ -27,7 +27,7 @@ DaysToCorrect = DaysToCorrect or 7; -- number of days to distribute correction o
 
 
 --[[
-     Get most recent candle information for HST
+     Get most recent candle information for MTH
    ]]
 --
 Handlers.add('cron', Handlers.utils.hasMatchingTag('Action', 'Cron'), function(msg)
@@ -141,9 +141,15 @@ function UpdatePolicy(currentPrice)
   if (newSupply > 0) then
     CurrentSupply = newSupply
     ao.send({
-      Target = _HighStableProcess,
+      Target = _MithrilProcess,
       Action = 'Rebase',
       ['NewSupply'] = tostring(newSupply)
     })
   end
 end
+
+--TODO: Update whitepaper to include staking to mint and new bitcoin supply. (Also update the initial supply)
+--TODO: create the website
+--TODO: create a seed for the official processes
+--TODO: consider deploying with this https://github.com/Autonomous-Finance/aoform
+--TODO: initialize cron
