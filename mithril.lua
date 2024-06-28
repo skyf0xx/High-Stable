@@ -80,8 +80,13 @@ TotalSupply = TotalSupply or utils.toBalanceValue(21e6 * 10 ^ Denomination)
 ---@type string
 TotalGons = TotalGons or utils.toBalanceValue(bint.maxinteger() - (bint.maxinteger() % bint(TotalSupply)))
 
----@type integer
-GonsPerToken = GonsPerToken or Rebase(TotalSupply)
+
+---@type Bint
+GonsPerToken = GonsPerToken or bint.zero()
+if (GonsPerToken == bint.zero()) then
+  Rebase(TotalSupply)
+end
+
 
 Balances = Balances or { [ao.id] = TotalGons }
 
