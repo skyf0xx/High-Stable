@@ -78,7 +78,7 @@ TotalSupply = TotalSupply or utils.toBalanceValue(21e6 * 10 ^ Denomination)
     Use the highest integer value for TotalGons for max granularity.
    ]]
 ---@type string
-TotalGons = utils.toBalanceValue(0x7FFFFFFFFFFFFFFF // bint(TotalSupply))
+TotalGons = TotalGons or utils.toBalanceValue(bint.maxinteger() - (bint.maxinteger() % bint(TotalSupply)))
 
 ---@type integer
 GonsPerToken = GonsPerToken or Rebase(TotalSupply)
