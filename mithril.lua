@@ -49,6 +49,16 @@ local utils = {
 
 
 --[[
+  rebase function to update the supply and gons per token
+]]
+--
+---@param newSupply string
+function Rebase(newSupply)
+  GonsPerToken = bint.__idiv(bint(TotalGons), bint(newSupply))
+  TotalSupply = newSupply
+end
+
+--[[
      Initialize State
 
      ao.id is equal to the Process.Id
@@ -280,14 +290,6 @@ end)
      Handler for Rebasing the total supply
    ]]
 --
----@param newSupply string
----@return number
-function Rebase(newSupply)
-  GonsPerToken = (bint(TotalGons) // bint(newSupply))
-  TotalSupply = newSupply
-
-  return GonsPerToken
-end
 
 Handlers.add('rebase', Handlers.utils.hasMatchingTag('Action', 'Rebase'),
   function(msg)
