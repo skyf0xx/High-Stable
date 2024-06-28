@@ -129,7 +129,9 @@ Handlers.add('balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), func
     bal = Balances[msg.From]
   end
 
-  local MTHBalance = utils.toBalanceValue((bint(bal) // GonsPerToken))
+  local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), GonsPerToken))
+
+
 
   ao.send({
     Target = msg.From,
@@ -149,7 +151,7 @@ Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
     local MTHBalances = {}
 
     for i = 1, #Balances do
-      local MTHBalance = utils.toBalanceValue((bint(Balances[i]) // GonsPerToken))
+      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(Balances[i]), GonsPerToken))
       table.insert(MTHBalances, MTHBalance)
     end
 
