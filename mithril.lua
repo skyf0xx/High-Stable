@@ -312,8 +312,3 @@ Handlers.add('rebase', Handlers.utils.hasMatchingTag('Action', 'Rebase'),
         Colors.blue .. msg.NewSupply .. Colors.reset
     })
   end)
-
-
---TODO: when selling to an exchange, add a fee and send it to minters
---TODO: update mint function so it sends to an array of current stakers. The array has proportion of rewards
---
