@@ -81,3 +81,38 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     })
   end)
 
+
+
+Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
+  function(msg)
+    local from = msg.From
+    local token = msg.Tags['Token']
+    local stakeable = tableUtils.includes(token, tableUtils.values(allowedTokens))
+    local quantity = Stakers[token][from] or '0'
+    local tokenName = TokenName(token)
+
+    assert(type(stakeable) == true, 'Token: ' .. token .. ' is not stakable and was ignored!')
+    assert(bint(0) < bint(quantity), 'You need to have more than zero staked tokens!')
+
+    Stakers[token][from] = nil
+
+    --send the staked tokens back to the user
+    ao.send({
+      Target = token,
+      Action = 'Transfer',
+      Recipient = from,
+      Quantity = quantity,
+      ['X-Message'] = 'Mithril Unstake',
+      ['X-Staked-Balance-Remaining-' .. tokenName] = '0'
+    })
+
+    ao.send({
+      Target = from,
+      Data = Colors.gray ..
+        'Successfully unstaked ' ..
+        Colors.blue .. quantity .. Colors.reset .. ' ' .. tokenName
+    })
+  end)
+
+
+
