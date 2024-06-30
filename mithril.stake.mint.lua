@@ -8,7 +8,7 @@ local allowedTokens = { stETH = 'xxxx', stSOL = 'yyy' }
   Initialize the staker table. stakers[token][user] = balance
 ]]
 ---@return table<string, table>
-function InitStakers()
+function UpdateAllowedTokens()
   local stakers = {}
   for _, token in pairs(allowedTokens) do
     stakers[token] = {}
@@ -16,7 +16,7 @@ function InitStakers()
   return stakers
 end
 
-Stakers = Stakers or InitStakers()
+Stakers = Stakers or UpdateAllowedTokens()
 
 
 --[[
