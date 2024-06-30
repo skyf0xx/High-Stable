@@ -40,10 +40,9 @@ local utils = {
 
 
 --[[
-     Handler for staking. To stake, simply send tokens to this address.
+     Get the name of the token
    ]]
 --
-
 ---@param address string
 ---@return string
 function TokenName(address)
