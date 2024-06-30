@@ -1,6 +1,9 @@
 Variant = '0.0.1'
 local bint = require('.bint')(256)
 local tableUtils = require('.utils')
+local json = require('json')
+
+-- caution - allowedtokens should be append only
 local allowedTokens = { stETH = 'xxxx', stSOL = 'yyy' }
 
 
@@ -11,7 +14,7 @@ local allowedTokens = { stETH = 'xxxx', stSOL = 'yyy' }
 function UpdateAllowedTokens()
   local stakers = {}
   for _, token in pairs(allowedTokens) do
-    stakers[token] = {}
+    if not stakers[token] then stakers[token] = {} end
   end
   return stakers
 end
@@ -55,6 +58,25 @@ function TokenName(address)
   return ''
 end
 
+--[[
+     Handler to update allowed tokens.
+     Update allowedTokens array then call this handler
+   ]]
+--
+Handlers.add('update-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Update-Allowed-Tokens'),
+  function(msg)
+    UpdateAllowedTokens()
+    ao.send({
+      Target = msg.From,
+      Data = 'Allowed tokens: ' .. json.encode(allowedTokens)
+    })
+  end)
+
+
+--[[
+     Handler for staking. To stake, simply send tokens to this address.
+   ]]
+--
 Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
   function(msg)
     -- credit notice is sent by the token process to the staking contract
@@ -115,3 +137,14 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
 
 
 
+
+
+--TODO: rewrite so you:
+--[[
+  1. Get staked balances of requester
+  2. Get all staked balances
+  3. Return an allowed tokens list
+  4. every 5 minutes, call mint from mth, with a proportion to mint to each user (mint should have a cap, and amount to mint based on current total supply).
+  5. Mint should also have a start date and end-date and check it doesn't go over supply
+]]
+--
