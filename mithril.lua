@@ -1,6 +1,9 @@
 local bint = require('.bint')(256)
 local ao = require('ao')
 local MonetaryPolicyProcess = 'Yw_ZVx8aQLi4Oc5j6ELMt5yzzizJzSOXHf7fg0fCORU'
+local MintProcess = 'xxx'
+local TRANSFER_LOCK_TIMESTAMP = 1740720000 -- February 28, 2025 00:00:00 UTC
+
 --[[
   This module implements the ao Standard Token Specification.
 
@@ -163,6 +166,9 @@ Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
    ]]
 --
 Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), function(msg)
+  -- Check if current time is after transfer lock period
+  assert(os.time() >= TRANSFER_LOCK_TIMESTAMP, 'Transfers are locked until February 28, 2025 00:00:00 UTC')
+
   assert(type(msg.Recipient) == 'string', 'Recipient is required!')
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
   assert(bint.__lt(0, bint(msg.Quantity)), 'Quantity must be greater than 0')
