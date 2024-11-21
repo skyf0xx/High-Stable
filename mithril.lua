@@ -228,7 +228,7 @@ end)
 
 
 --[[
-    Mint
+    Standard Mint
    ]]
 --
 Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(msg)

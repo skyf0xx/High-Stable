@@ -147,9 +147,3 @@ function UpdatePolicy(currentPrice)
     })
   end
 end
-
---TODO: Update whitepaper to include staking to mint and new bitcoin supply. (Also update the initial supply)
---TODO: create the website
---TODO: create a seed for the official processes
---TODO: consider deploying with this https://github.com/Autonomous-Finance/aoform
---TODO: initialize cron
