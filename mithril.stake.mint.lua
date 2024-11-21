@@ -286,7 +286,7 @@ Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Req
     -- Send mint requests to token contract
     ao.send({
       Target = TOKEN_MINT_PROCESS,
-      Action = 'Request-Token-Mints',
+      Action = 'Mint-From-Stake',
       Data = json.encode(mints)
     })
   end)
