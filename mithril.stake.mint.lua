@@ -169,6 +169,18 @@ Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get
   end)
 
 
+--[[
+     Handler to get list of allowed tokens
+   ]]
+--
+Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-Allowed-Tokens'),
+  function(msg)
+    ao.send({
+      Target = msg.From,
+      Action = 'Allowed-Tokens',
+      Data = json.encode(allowedTokens)
+    })
+  end)
 
 --TODO: rewrite so you:
 --[[
