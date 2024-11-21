@@ -33,6 +33,12 @@ local utils = {
   subtract = function(a, b)
     return tostring(bint(a) - bint(b))
   end,
+  multiply = function(a, b)
+    return tostring(bint(a) * bint(b))
+  end,
+  divide = function(a, b)
+    return tostring(bint.__idiv(bint(a), bint(b)))
+  end,
   toBalanceValue = function(a)
     return tostring(bint(a))
   end,
