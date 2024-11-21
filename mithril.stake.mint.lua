@@ -3,8 +3,19 @@ local bint = require('.bint')(256)
 local tableUtils = require('.utils')
 local json = require('json')
 
+-- Constants
+TOKEN_MINT_PROCESS = 'xxxx'
+TOTAL_SUPPLY = 21000000 * 10 ^ 8  -- 21M tokens with 8 decimal places
+EMISSION_RATE_PER_MONTH = 0.01425 -- 1.425% monthly rate
+PERIODS_PER_MONTH = 8760          -- number of 5-minute periods in a month (43800/5)
+
+-- State variables
+CurrentSupply = CurrentSupply or 0
+LastMintTimestamp = LastMintTimestamp or 0
+
 -- caution - allowedtokens should be append only
 local allowedTokens = { stETH = 'xxxx', stSOL = 'yyy' }
+local tokenWeights = { stETH = '1', stSOL = '1' }
 
 
 --[[
@@ -188,12 +199,94 @@ Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-
     })
   end)
 
---TODO: rewrite so you:
+
 --[[
-  1. Get staked balances of requester
-  2. Get all staked balances
-  3. Return an allowed tokens list
-  4. every 5 minutes, call mint from mth, with a proportion to mint to each user (mint should have a cap, and amount to mint based on current total supply).
-  5. Mint should also have a start date and end-date and check it doesn't go over supply
+  Calculate emission for a 5-minute period
+  Returns the number of tokens to mint in this period
 ]]
---
+local function calculateEmission()
+  local remainingSupply = TOTAL_SUPPLY - CurrentSupply
+
+  -- Calculate the emission rate for a 5-minute period
+  -- Monthly rate is EMISSION_RATE_PER_MONTH, divided by periods per month
+  local periodRate = EMISSION_RATE_PER_MONTH / PERIODS_PER_MONTH
+
+  -- Calculate tokens to emit this period
+  local emission = math.floor(remainingSupply * periodRate)
+
+  return emission
+end
+
+--[[
+  Calculate individual staker allocations based on their stake weight
+]]
+local function calculateStakerAllocations(totalEmission)
+  local allocations = {}
+  local totalStakeWeight = bint.zero()
+
+  -- Calculate total weighted stake across all tokens
+  for token, stakersMap in pairs(Stakers) do
+    local tokenWeight = bint(tokenWeights[token])
+    for staker, amount in pairs(stakersMap) do
+      totalStakeWeight = totalStakeWeight + (bint(amount) * tokenWeight)
+    end
+  end
+
+  -- If no stakes, return empty allocations
+  if totalStakeWeight == bint.zero() then
+    return allocations
+  end
+
+  -- Calculate each staker's allocation
+  for token, stakersMap in pairs(Stakers) do
+    local tokenWeight = bint(tokenWeights[token])
+    for staker, amount in pairs(stakersMap) do
+      local stakerWeight = bint(amount) * tokenWeight
+      local allocation = utils.multiply(totalEmission, utils.divide(stakerWeight, totalStakeWeight))
+
+      if not allocations[staker] then
+        allocations[staker] = '0'
+      end
+      allocations[staker] = utils.add(allocations[staker], allocation)
+    end
+  end
+
+  return allocations
+end
+
+--[[
+  Handler to request token mints
+  Called every 5 minutes by a cron job oracle
+]]
+Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Request-Token-Mints'),
+  function(msg)
+    -- Ensure sufficient time has passed since last mint
+    local currentTime = os.time()
+    assert(currentTime >= LastMintTimestamp + 300, 'Too soon for next mint') -- 300 seconds = 5 minutes
+
+    -- Calculate new tokens to mint this period
+    local newTokens = calculateEmission()
+
+    -- Calculate allocation for each staker
+    local allocations = calculateStakerAllocations(newTokens)
+
+    -- Prepare mint requests
+    local mints = {}
+    for staker, amount in pairs(allocations) do
+      table.insert(mints, {
+        address = staker,
+        amount = amount
+      })
+    end
+
+    -- Update state
+    CurrentSupply = utils.add(CurrentSupply, newTokens)
+    LastMintTimestamp = currentTime
+
+    -- Send mint requests to token contract
+    ao.send({
+      Target = TOKEN_MINT_PROCESS,
+      Action = 'Request-Token-Mints',
+      Data = json.encode(mints)
+    })
+  end)
