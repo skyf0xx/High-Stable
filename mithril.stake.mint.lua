@@ -65,7 +65,7 @@ end
 --
 Handlers.add('update-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Update-Allowed-Tokens'),
   function(msg)
-    UpdateAllowedTokens()
+    Stakers = UpdateAllowedTokens()
     ao.send({
       Target = msg.From,
       Data = 'Allowed tokens: ' .. json.encode(allowedTokens)
