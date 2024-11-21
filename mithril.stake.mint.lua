@@ -141,6 +141,32 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
   end)
 
 
+--[[
+     Handler to get staked balances for a specific staker
+   ]]
+--
+Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get-Staked-Balances'),
+  function(msg)
+    local staker = msg.Tags['Staker']
+    assert(type(staker) == 'string', 'Staker address is required!')
+
+    -- Initialize result table to store balances
+    local balances = {}
+
+    -- Loop through each token in Stakers
+    for token, stakersMap in pairs(Stakers) do
+      -- Get the balance for this staker, or '0' if they haven't staked
+      balances[TokenName(token)] = stakersMap[staker] or '0'
+    end
+
+    -- Send response with balances
+    ao.send({
+      Target = msg.From,
+      Action = 'Staked-Balances',
+      Staker = staker,
+      Data = json.encode(balances)
+    })
+  end)
 
 
 
