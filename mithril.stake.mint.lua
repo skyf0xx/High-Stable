@@ -104,6 +104,11 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
 
 
 
+--[[
+     Handler to unstake
+   ]]
+--
+
 Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
   function(msg)
     local from = msg.From
