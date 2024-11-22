@@ -73,7 +73,7 @@ Variant = '0.0.3'
 Denomination = Denomination or 8
 --total MTH supply (externally displayed balance)
 ---@type string
-TotalSupply = TotalSupply or utils.toBalanceValue(21e6 * 10 ^ Denomination)
+TotalSupply = TotalSupply or utils.toBalanceValue(5050 * 10 ^ Denomination)
 
 --[[
     Internal balance calculation is handled in "gons"
