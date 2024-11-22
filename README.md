@@ -3,4 +3,9 @@
 Lua Language Server by sumneko
 
 Startup:
-`aos process-name --wallet .aos.json` to standardize, keep the process name same as the file, without the extension
+`aos process-name --wallet .aos.json`
+
+These are the current names for the processes:
+mithril.lua --> NumberAlwaysBigger
+mithril.policy.lua --> NABPolicy
+mithril.stake.mint.lua --> NABStakeMint
