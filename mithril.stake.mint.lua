@@ -4,7 +4,7 @@ local tableUtils = require('.utils')
 local json = require('json')
 
 -- Constants
-TOKEN_OWNER = 'xxxx'
+TOKEN_OWNER = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 TOTAL_SUPPLY = 21000000 * 10 ^ 8  -- 21M tokens with 8 decimal places
 EMISSION_RATE_PER_MONTH = 0.01425 -- 1.425% monthly rate
 PERIODS_PER_MONTH = 8760          -- number of 5-minute periods in a month (43800/5)

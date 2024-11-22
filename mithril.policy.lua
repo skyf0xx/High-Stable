@@ -4,7 +4,7 @@ local json = require('json')
 
 local _DEXIExchange = 'jao0bfwk99iME8aK_TJLjm8H0bwaHzNuVbKRE1jArRo'
 local _AMMPool = '2bKo3vwB1Mo5TItmxuUQzZ11JgKauU_n2IZO1G13AIk'
-local _MithrilProcess = '4CaeyAuNb7kRLiJBv6ij4uYmb5cHiu6r8lUUa9L7jxs'
+local TOKEN_OWNER = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 
 --[[
   This module gets the highest low and acts on the monetary policy for MTH
@@ -141,7 +141,7 @@ function UpdatePolicy(currentPrice)
   if (newSupply > 0) then
     CurrentSupply = newSupply
     ao.send({
-      Target = _MithrilProcess,
+      Target = TOKEN_OWNER,
       Action = 'Rebase',
       ['NewSupply'] = tostring(newSupply)
     })
