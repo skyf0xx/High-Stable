@@ -84,7 +84,7 @@ end
 Handlers.add('update-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Update-Allowed-Tokens'),
   function(msg)
     Stakers = UpdateAllowedTokens()
-    ao.send({
+    Send({
       Target = msg.From,
       Data = 'Allowed tokens: ' .. json.encode(allowedTokens)
     })
@@ -112,7 +112,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
 
     Stakers[token][sender] = utils.add(Stakers[token][sender], quantity)
 
-    ao.send({
+    Send({
       Target = sender,
       Data = Colors.gray ..
         'You have staked a total of ' ..
@@ -141,7 +141,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     Stakers[token][from] = nil
 
     --send the staked tokens back to the user
-    ao.send({
+    Send({
       Target = token,
       Action = 'Transfer',
       Recipient = from,
@@ -150,7 +150,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
       ['X-Staked-Balance-Remaining-' .. tokenName] = '0'
     })
 
-    ao.send({
+    Send({
       Target = from,
       Data = Colors.gray ..
         'Successfully unstaked ' ..
@@ -178,7 +178,7 @@ Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get
     end
 
     -- Send response with balances
-    ao.send({
+    Send({
       Target = msg.From,
       Action = 'Staked-Balances',
       Staker = staker,
@@ -193,7 +193,7 @@ Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get
 --
 Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-Allowed-Tokens'),
   function(msg)
-    ao.send({
+    Send({
       Target = msg.From,
       Action = 'Allowed-Tokens',
       Data = json.encode(allowedTokens)
@@ -285,7 +285,7 @@ Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Req
     LastMintTimestamp = currentTime
 
     -- Send mint requests to token contract
-    ao.send({
+    Send({
       Target = TOKEN_OWNER,
       Action = 'Mint-From-Stake',
       Data = json.encode(mints)

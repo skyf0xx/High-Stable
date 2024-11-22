@@ -1,5 +1,4 @@
 local bint = require('.bint')(256)
-local ao = require('ao')
 local MonetaryPolicyProcess = '_disabled_' --enabled after Transfer lock period
 local MINT_PROCESS = 'R2qS7e4FJT1P-K418Ml33-LknnVsKBkwmaHsb9i8A2Q'
 local TRANSFER_LOCK_TIMESTAMP = 1740720000 -- February 28, 2025 00:00:00 UTC
@@ -108,8 +107,7 @@ Logo = Logo or 'LQ4crOHN9qO6JsLNs253AaTch6MgAMbM8PKqBxs4hgI' --TODO: Update Logo
    ]]
 --
 Handlers.add('info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Name = Name,
     Ticker = Ticker,
     Logo = Logo,
@@ -137,8 +135,7 @@ Handlers.add('balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), func
 
 
 
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Balance = MTHBalance,
     Ticker = Ticker,
     Account = msg.Tags.Recipient or msg.From,
@@ -160,7 +157,7 @@ Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
       MTHBalances[address] = MTHBalance
     end
 
-    ao.send({ Target = msg.From, Data = json.encode(MTHBalances) })
+    msg.reply({ Data = json.encode(MTHBalances) })
   end)
 
 --[[
@@ -223,12 +220,11 @@ Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), fu
       end
 
       -- Send Debit-Notice and Credit-Notice
-      ao.send(debitNotice)
-      ao.send(creditNotice)
+      Send(debitNotice)
+      Send(creditNotice)
     end
   else
-    ao.send({
-      Target = msg.From,
+    msg.reply({
       Action = 'Transfer-Error',
       ['Message-Id'] = msg.Id,
       Error = 'Insufficient Balance!'
@@ -251,13 +247,11 @@ Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(m
     -- Add tokens to the token pool, according to Quantity
     Balances[msg.From] = utils.add(Balances[msg.From], msg.Quantity)
     TotalSupply = utils.add(TotalSupply, msg.Quantity)
-    ao.send({
-      Target = msg.From,
+    msg.reply({
       Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
     })
   else
-    ao.send({
-      Target = msg.From,
+    msg.reply({
       Action = 'Mint-Error',
       ['Message-Id'] = msg.Id,
       Error = 'Only the Process Id can mint new ' .. Ticker .. ' tokens!'
@@ -304,7 +298,7 @@ Handlers.add('mint-from-stake', Handlers.utils.hasMatchingTag('Action', 'Mint-Fr
     totalMinted = utils.add(totalMinted, amount)
     --[[ commented out for now (gas implications)
     -- Send credit notice to recipient
-    ao.send({
+    Send({
       Target = address,
       Action = 'Credit-Notice',
       Sender = ao.id,
@@ -327,8 +321,7 @@ end)
 Handlers.add('totalSupply', Handlers.utils.hasMatchingTag('Action', 'Total-Supply'), function(msg)
   assert(msg.From ~= ao.id, 'Cannot call Total-Supply from the same process!')
 
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Action = 'Total-Supply',
     Data = TotalSupply,
     Ticker = Ticker
@@ -348,8 +341,7 @@ Handlers.add('burn', Handlers.utils.hasMatchingTag('Action', 'Burn'), function(m
   Balances[msg.From] = utils.subtract(Balances[msg.From], gonQuantity)
   TotalSupply = utils.subtract(TotalSupply, msg.Quantity)
 
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Data = Colors.gray .. 'Successfully burned ' .. Colors.blue .. msg.Quantity .. Colors.reset
   })
 end)
@@ -368,8 +360,7 @@ Handlers.add('rebase', Handlers.utils.hasMatchingTag('Action', 'Rebase'),
 
     Rebase(msg.NewSupply)
 
-    ao.send({
-      Target = msg.From,
+    msg.reply({
       Action = 'Rebase',
       Data = Colors.gray ..
         'Total supply has been rebased to ' ..
