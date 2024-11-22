@@ -6,6 +6,6 @@ Startup:
 `aos process-name --wallet .aos.json`
 
 These are the current names for the processes:
-mithril.lua --> NumberAlwaysBigger
-mithril.policy.lua --> NABPolicy
-mithril.stake.mint.lua --> NABStakeMint
+mithril.lua --> "Number Always "Bigger"
+mithril.policy.lua --> "NAB Policy"
+mithril.stake.mint.lua --> "NAB Stake-Mint"
