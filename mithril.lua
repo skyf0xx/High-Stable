@@ -3,6 +3,7 @@ local ao = require('ao')
 local MonetaryPolicyProcess = '_disabled_' --enabled after Transfer lock period
 local MINT_PROCESS = 'R2qS7e4FJT1P-K418Ml33-LknnVsKBkwmaHsb9i8A2Q'
 local TRANSFER_LOCK_TIMESTAMP = 1740720000 -- February 28, 2025 00:00:00 UTC
+local PRE_MINT = 5050
 
 --[[
   This module implements the ao Standard Token Specification.
@@ -73,7 +74,7 @@ Variant = '0.0.3'
 Denomination = Denomination or 8
 --total MTH supply (externally displayed balance)
 ---@type string
-TotalSupply = TotalSupply or utils.toBalanceValue(5050 * 10 ^ Denomination)
+TotalSupply = TotalSupply or utils.toBalanceValue(PRE_MINT * 10 ^ Denomination)
 
 --[[
     Internal balance calculation is handled in "gons"
