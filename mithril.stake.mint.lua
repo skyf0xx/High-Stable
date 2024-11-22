@@ -4,7 +4,7 @@ local tableUtils = require('.utils')
 local json = require('json')
 
 -- Constants
-TOKEN_MINT_PROCESS = 'xxxx'
+TOKEN_OWNER = 'xxxx'
 TOTAL_SUPPLY = 21000000 * 10 ^ 8  -- 21M tokens with 8 decimal places
 EMISSION_RATE_PER_MONTH = 0.01425 -- 1.425% monthly rate
 PERIODS_PER_MONTH = 8760          -- number of 5-minute periods in a month (43800/5)
@@ -285,7 +285,7 @@ Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Req
 
     -- Send mint requests to token contract
     ao.send({
-      Target = TOKEN_MINT_PROCESS,
+      Target = TOKEN_OWNER,
       Action = 'Mint-From-Stake',
       Data = json.encode(mints)
     })

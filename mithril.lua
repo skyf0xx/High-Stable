@@ -1,7 +1,7 @@
 local bint = require('.bint')(256)
 local ao = require('ao')
 local MonetaryPolicyProcess = 'Yw_ZVx8aQLi4Oc5j6ELMt5yzzizJzSOXHf7fg0fCORU'
-local MintProcess = 'xxx'
+local MINT_PROCESS = 'xxx'
 local TRANSFER_LOCK_TIMESTAMP = 1740720000 -- February 28, 2025 00:00:00 UTC
 
 --[[
@@ -269,7 +269,7 @@ end)
    ]]
 --
 Handlers.add('mint-from-stake', Handlers.utils.hasMatchingTag('Action', 'Mint-From-Stake'), function(msg)
-  assert(MintProcess == msg.From, 'Request is not from the trusted Mint Process!')
+  assert(MINT_PROCESS == msg.From, 'Request is not from the trusted Mint Process!')
 
   -- Parse the JSON data containing mint requests
   local mintRequests = json.decode(msg.Data)
