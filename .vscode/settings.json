@@ -1,4 +1,4 @@
 {
     "Lua.diagnostics.disable": ["undefined-field"],
-    "Lua.diagnostics.globals": ["Colors", "Handlers", "ao"]
+    "Lua.diagnostics.globals": ["Colors", "Handlers", "ao", "Send"]
 }
