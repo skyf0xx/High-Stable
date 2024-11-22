@@ -14,8 +14,8 @@ CurrentSupply = CurrentSupply or 0
 LastMintTimestamp = LastMintTimestamp or 0
 
 -- caution - allowedtokens should be append only
-local allowedTokens = { stETH = 'xxxx', stSOL = 'yyy' }
-local tokenWeights = { stETH = '1', stSOL = '1' }
+local allowedTokens = { agent_qar_lp = 'lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM', }
+local tokenWeights = { agent_qar_lp = '1' }
 
 
 --[[
