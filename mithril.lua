@@ -153,9 +153,10 @@ Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
   function(msg)
     local MTHBalances = {}
 
-    for i = 1, #Balances do
-      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(Balances[i]), GonsPerToken))
-      table.insert(MTHBalances, MTHBalance)
+    for address, balance in pairs(Balances) do
+      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(balance), GonsPerToken))
+      -- Store both address and balance
+      MTHBalances[address] = MTHBalance
     end
 
     ao.send({ Target = msg.From, Data = json.encode(MTHBalances) })
