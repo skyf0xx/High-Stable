@@ -259,7 +259,7 @@ end
   Handler to request token mints
   Called every 5 minutes by a cron job oracle
 ]]
-Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Request-Token-Mints'),
+Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Cron'),
   function(msg)
     -- Ensure sufficient time has passed since last mint
     local currentTime = os.time()
