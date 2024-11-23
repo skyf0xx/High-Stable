@@ -291,3 +291,68 @@ Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Cro
       Data = json.encode(mints)
     })
   end)
+
+
+--[[
+     Handler to get stake ownership percentage for a specific address
+     This considers the weighted value of all staked tokens
+   ]]
+--
+Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get-Stake-Ownership'),
+  function(msg)
+    local staker = msg.Tags['Staker']
+    assert(type(staker) == 'string', 'Staker address is required!')
+
+    -- Calculate total weighted stake across all tokens
+    local totalStakeWeight = bint.zero()
+    local stakerWeight = bint.zero()
+
+    -- First pass: calculate total weighted stake
+    for token, stakersMap in pairs(Stakers) do
+      local tokenWeight = bint(tokenWeights[token])
+      for addr, amount in pairs(stakersMap) do
+        local weight = bint(amount) * tokenWeight
+        totalStakeWeight = totalStakeWeight + weight
+
+        -- While we're here, calculate this staker's weighted total
+        if addr == staker then
+          stakerWeight = stakerWeight + weight
+        end
+      end
+    end
+
+    -- Handle case where there are no stakes
+    if totalStakeWeight == bint.zero() then
+      Send({
+        Target = msg.From,
+        Action = 'Stake-Ownership',
+        Staker = staker,
+        ['Ownership-Percentage'] = '0',
+        Data = json.encode({
+          percentage = '0',
+          stakerWeight = '0',
+          totalWeight = '0'
+        })
+      })
+      return
+    end
+
+    -- Calculate ownership percentage (multiply by 100 for percentage)
+    local ownershipPercentage = utils.divide(
+      utils.multiply(stakerWeight, '100'),
+      totalStakeWeight
+    )
+
+    -- Send response with ownership details
+    Send({
+      Target = msg.From,
+      Action = 'Stake-Ownership',
+      Staker = staker,
+      ['Ownership-Percentage'] = ownershipPercentage,
+      Data = json.encode({
+        percentage = ownershipPercentage,
+        stakerWeight = tostring(stakerWeight),
+        totalWeight = tostring(totalStakeWeight)
+      })
+    })
+  end)
