@@ -169,16 +169,27 @@ Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get
     local staker = msg.Tags['Staker']
     assert(type(staker) == 'string', 'Staker address is required!')
 
-    -- Initialize result table to store balances
+    -- Initialize result array to store balances
     local balances = {}
 
-    -- Loop through each token in Stakers
-    for token, stakersMap in pairs(Stakers) do
-      -- Get the balance for this staker, or '0' if they haven't staked
-      balances[TokenName(token)] = stakersMap[staker] or '0'
+    -- Loop through allowedTokensNames to maintain consistent order
+    for token, name in pairs(allowedTokensNames) do
+      local tokenAddress = allowedTokens[token]
+      local amount = '0' -- Default to '0' for unstaked tokens
+
+      -- If there's a staked balance for this token, use it
+      if Stakers[tokenAddress] and Stakers[tokenAddress][staker] then
+        amount = Stakers[tokenAddress][staker]
+      end
+
+      -- Add entry to balances array
+      table.insert(balances, {
+        name = name,
+        amount = amount
+      })
     end
 
-    -- Send response with balances
+    -- Send response with balances array
     Send({
       Target = msg.From,
       Action = 'Staked-Balances',
