@@ -16,6 +16,7 @@ LastMintTimestamp = LastMintTimestamp or 0
 
 -- caution - allowedtokens should be append only
 local allowedTokens = { agent_qar_lp = 'lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM', }
+local allowedTokensNames = { agent_qar_lp = 'Agent/ QAR LP', }
 local tokenWeights = { agent_qar_lp = '1' }
 
 
@@ -196,7 +197,7 @@ Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-
     Send({
       Target = msg.From,
       Action = 'Allowed-Tokens',
-      Data = json.encode(allowedTokens)
+      Data = json.encode({ allowedTokens, allowedTokensNames })
     })
   end)
 
