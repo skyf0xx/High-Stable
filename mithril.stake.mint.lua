@@ -182,9 +182,10 @@ Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get
         amount = Stakers[tokenAddress][staker]
       end
 
-      -- Add entry to balances array
+      -- Add entry to balances array with token address included
       table.insert(balances, {
         name = name,
+        address = tokenAddress,
         amount = amount
       })
     end
