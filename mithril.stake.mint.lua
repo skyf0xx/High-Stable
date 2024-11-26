@@ -106,7 +106,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     local tokenName = TokenName(token)
 
     --don't bother to refund unstakeable tokens - to prevent being drained through spurious fees
-    assert(type(stakeable) == true, 'Token: ' .. token .. ' is not stakable and was ignored!')
+    assert(stakeable, 'Token: ' .. token .. ' is not stakable and was ignored!')
     assert(bint(0) < bint(quantity), 'Quantity must be greater than zero!')
 
     if not Stakers[token][sender] then Stakers[token][sender] = '0' end
@@ -136,7 +136,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     local quantity = Stakers[token][from] or '0'
     local tokenName = TokenName(token)
 
-    assert(type(stakeable) == true, 'Token: ' .. token .. ' is not stakable and was ignored!')
+    assert(stakeable, 'Token: ' .. token .. ' is not stakable and was ignored!')
     assert(bint(0) < bint(quantity), 'You need to have more than zero staked tokens!')
 
     Stakers[token][from] = nil
