@@ -313,23 +313,32 @@ Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Cro
 --
 Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get-Stake-Ownership'),
   function(msg)
+    -- Input validation with clear error message
     local staker = msg.Tags['Staker']
     assert(type(staker) == 'string', 'Staker address is required!')
 
-    -- Calculate total weighted stake across all tokens
+    -- Initialize weights with bint
     local totalStakeWeight = bint.zero()
     local stakerWeight = bint.zero()
 
-    -- First pass: calculate total weighted stake
-    for token, stakersMap in pairs(Stakers) do
-      local tokenWeight = bint(tokenWeights[token])
-      for addr, amount in pairs(stakersMap) do
-        local weight = bint(amount) * tokenWeight
-        totalStakeWeight = totalStakeWeight + weight
+    -- Calculate total weighted stake across all tokens
+    for tokenAddress, stakersMap in pairs(Stakers) do
+      -- Get token name for weight lookup
+      local tokenName = TokenName(tokenAddress)
+      -- Ensure we have a valid token weight
+      if tokenName and tokenWeights[tokenName] then
+        local tokenWeight = bint(tokenWeights[tokenName])
 
-        -- While we're here, calculate this staker's weighted total
-        if addr == staker then
-          stakerWeight = stakerWeight + weight
+        -- Calculate weights for all stakers
+        for addr, amount in pairs(stakersMap) do
+          -- Convert amount to bint and calculate weight
+          local weight = bint(amount) * tokenWeight
+          totalStakeWeight = totalStakeWeight + weight
+
+          -- Calculate this staker's weight if it matches
+          if addr == staker then
+            stakerWeight = stakerWeight + weight
+          end
         end
       end
     end
@@ -350,10 +359,10 @@ Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get
       return
     end
 
-    -- Calculate ownership percentage (multiply by 100 for percentage)
+    -- Calculate ownership percentage using utils helpers
     local ownershipPercentage = utils.divide(
-      utils.multiply(stakerWeight, '100'),
-      totalStakeWeight
+      utils.multiply(tostring(stakerWeight), '100'),
+      tostring(totalStakeWeight)
     )
 
     -- Send response with ownership details
@@ -368,4 +377,5 @@ Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get
         totalWeight = tostring(totalStakeWeight)
       })
     })
-  end)
+  end
+)
