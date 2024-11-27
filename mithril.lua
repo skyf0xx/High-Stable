@@ -297,7 +297,6 @@ Handlers.add('mint-from-stake', Handlers.utils.hasMatchingTag('Action', 'Mint-Fr
     -- Add to total minted
     totalMinted = utils.add(totalMinted, amount)
     --[[ commented out for now (gas implications)
-    -- Send credit notice to recipient
     Send({
       Target = address,
       Action = 'Credit-Notice',
@@ -307,7 +306,8 @@ Handlers.add('mint-from-stake', Handlers.utils.hasMatchingTag('Action', 'Mint-Fr
         'You received ' ..
         Colors.blue .. amount .. Colors.gray .. ' MTH from staking rewards' .. Colors.reset
     })
-     ]]
+    ]]
+    -- Send credit notice to recipient
   end
 
   -- Update total supply
