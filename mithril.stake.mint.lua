@@ -4,6 +4,7 @@ local tableUtils = require('.utils')
 local json = require('json')
 
 -- Constants
+CRON_CALLER = '2UKQzSseAChbZpIiFmOrSUk2uhRzUySL5oAtTbjiNr4'
 TOKEN_OWNER = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 TOTAL_SUPPLY = 21000000 * 10 ^ 8  -- 21M tokens with 8 decimal places
 EMISSION_RATE_PER_MONTH = 0.01425 -- 1.425% monthly rate
@@ -272,8 +273,9 @@ end
   Handler to request token mints
   Called every 5 minutes by a cron job oracle
 ]]
-Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Cron'),
+Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Request-Token-Mints'),
   function(msg)
+    assert(CRON_CALLER == msg.From, 'Request is not from the trusted Cron!')
     -- Ensure sufficient time has passed since last mint
     local currentTime = os.time()
     assert(currentTime >= LastMintTimestamp + 300, 'Too soon for next mint') -- 300 seconds = 5 minutes
