@@ -221,27 +221,33 @@ Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-
 ]]
 
 local function calculateEmission()
-  local remainingSupply = TOTAL_SUPPLY - CurrentSupply
+  -- Convert all values to bint early to avoid overflow
+  local totalSupplyBint = bint(TOTAL_SUPPLY)
+  local currentSupplyBint = bint(CurrentSupply)
+  local remainingSupply = totalSupplyBint - currentSupplyBint
 
   -- If no supply remaining, return 0
-  if remainingSupply <= 0 then
+  if remainingSupply <= bint.zero() then
     return '0'
   end
 
   -- Calculate the emission rate for a 5-minute period
-  -- Monthly rate is EMISSION_RATE_PER_MONTH, divided by periods per month
-  local periodRate = EMISSION_RATE_PER_MONTH / PERIODS_PER_MONTH
+  -- Convert rate to a fixed-point number with 8 decimal places for precision
+  local periodRateFixed = math.floor((EMISSION_RATE_PER_MONTH / PERIODS_PER_MONTH) * 10 ^ 8)
+  local periodRateBint = bint(periodRateFixed)
 
   -- Calculate tokens to emit this period
-  local emission = math.floor(remainingSupply * periodRate)
+  -- First multiply by rate, then divide by 10^8 to get back to normal scale
+  local emission = bint.__idiv(remainingSupply * periodRateBint, bint(10 ^ 8))
 
   -- Double check we don't exceed remaining supply
   if emission > remainingSupply then
     emission = remainingSupply
   end
 
-  return tostring(emission)
+  return utils.toBalanceValue(emission)
 end
+
 
 --[[
   Calculate individual staker allocations based on their stake weight
@@ -249,12 +255,17 @@ end
 local function calculateStakerAllocations(totalEmission)
   local allocations = {}
   local totalStakeWeight = bint.zero()
+  local emissionBint = bint(totalEmission)
 
   -- Calculate total weighted stake across all tokens
   for token, stakersMap in pairs(Stakers) do
-    local tokenWeight = bint(tokenWeights[token])
-    for staker, amount in pairs(stakersMap) do
-      totalStakeWeight = totalStakeWeight + (bint(amount) * tokenWeight)
+    local tokenName = TokenName(token)
+    if tokenName and tokenWeights[tokenName] then
+      local tokenWeight = bint(tokenWeights[tokenName])
+      for _, amount in pairs(stakersMap) do
+        -- Convert amount to bint before multiplication
+        totalStakeWeight = totalStakeWeight + (bint(amount) * tokenWeight)
+      end
     end
   end
 
@@ -265,20 +276,30 @@ local function calculateStakerAllocations(totalEmission)
 
   -- Calculate each staker's allocation
   for token, stakersMap in pairs(Stakers) do
-    local tokenWeight = bint(tokenWeights[token])
-    for staker, amount in pairs(stakersMap) do
-      local stakerWeight = bint(amount) * tokenWeight
-      local allocation = utils.multiply(totalEmission, utils.divide(stakerWeight, totalStakeWeight))
+    local tokenName = TokenName(token)
+    if tokenName and tokenWeights[tokenName] then
+      local tokenWeight = bint(tokenWeights[tokenName])
+      for staker, amount in pairs(stakersMap) do
+        local stakerWeight = bint(amount) * tokenWeight
+        -- Use multiplication before division to maintain precision
+        -- Multiply by a large factor first, then divide, then adjust back
+        local scaleFactor = bint(10 ^ 8)
+        local allocation = bint.__idiv(
+          (emissionBint * stakerWeight * scaleFactor),
+          (totalStakeWeight * scaleFactor)
+        )
 
-      if not allocations[staker] then
-        allocations[staker] = '0'
+        if not allocations[staker] then
+          allocations[staker] = '0'
+        end
+        allocations[staker] = utils.toBalanceValue(bint(allocations[staker]) + allocation)
       end
-      allocations[staker] = utils.add(allocations[staker], allocation)
     end
   end
 
   return allocations
 end
+
 
 --[[
   Handler to request token mints
@@ -287,6 +308,7 @@ end
 Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Request-Token-Mints'),
   function(msg)
     assert(CRON_CALLER == msg.From, 'Request is not from the trusted Cron!')
+
     -- Ensure sufficient time has passed since last mint
     local currentTime = os.time()
     assert(currentTime >= LastMintTimestamp + 300, 'Too soon for next mint') -- 300 seconds = 5 minutes
@@ -305,22 +327,27 @@ Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Req
     -- Prepare mint requests
     local mints = {}
     for staker, amount in pairs(allocations) do
-      table.insert(mints, {
-        address = staker,
-        amount = amount
-      })
+      -- Only include non-zero allocations
+      if bint(amount) > bint.zero() then
+        table.insert(mints, {
+          address = staker,
+          amount = amount
+        })
+      end
     end
 
     -- Update state
     CurrentSupply = utils.add(CurrentSupply, newTokens)
     LastMintTimestamp = currentTime
 
-    -- Send mint requests to token contract
-    Send({
-      Target = TOKEN_OWNER,
-      Action = 'Mint-From-Stake',
-      Data = json.encode(mints)
-    })
+    -- Send mint requests to token contract only if there are valid mints
+    if #mints > 0 then
+      Send({
+        Target = TOKEN_OWNER,
+        Action = 'Mint-From-Stake',
+        Data = json.encode(mints)
+      })
+    end
   end)
 
 
@@ -379,8 +406,8 @@ Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get
 
     -- Calculate ownership percentage using utils helpers
     local ownershipPercentage = utils.divide(
-      utils.multiply(tostring(stakerWeight), '100'),
-      tostring(totalStakeWeight)
+      utils.multiply(utils.toBalanceValue(stakerWeight), '100'),
+      utils.toBalanceValue(totalStakeWeight)
     )
 
     -- Send response with ownership details
@@ -391,8 +418,8 @@ Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get
       ['Ownership-Percentage'] = ownershipPercentage,
       Data = json.encode({
         percentage = ownershipPercentage,
-        stakerWeight = tostring(stakerWeight),
-        totalWeight = tostring(totalStakeWeight)
+        stakerWeight = utils.toBalanceValue(stakerWeight),
+        totalWeight = utils.toBalanceValue(totalStakeWeight)
       })
     })
   end
