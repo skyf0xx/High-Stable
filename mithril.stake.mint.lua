@@ -219,8 +219,14 @@ Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-
   Calculate emission for a 5-minute period
   Returns the number of tokens to mint in this period
 ]]
+
 local function calculateEmission()
   local remainingSupply = TOTAL_SUPPLY - CurrentSupply
+
+  -- If no supply remaining, return 0
+  if remainingSupply <= 0 then
+    return '0'
+  end
 
   -- Calculate the emission rate for a 5-minute period
   -- Monthly rate is EMISSION_RATE_PER_MONTH, divided by periods per month
@@ -229,7 +235,12 @@ local function calculateEmission()
   -- Calculate tokens to emit this period
   local emission = math.floor(remainingSupply * periodRate)
 
-  return emission
+  -- Double check we don't exceed remaining supply
+  if emission > remainingSupply then
+    emission = remainingSupply
+  end
+
+  return tostring(emission)
 end
 
 --[[
@@ -282,6 +293,11 @@ Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Req
 
     -- Calculate new tokens to mint this period
     local newTokens = calculateEmission()
+
+    -- If no tokens to mint, exit early
+    if newTokens == '0' then
+      return
+    end
 
     -- Calculate allocation for each staker
     local allocations = calculateStakerAllocations(newTokens)
