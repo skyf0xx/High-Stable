@@ -9,6 +9,8 @@ TOKEN_OWNER = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 TOTAL_SUPPLY = 21000000 * 10 ^ 8  -- 21M tokens with 8 decimal places
 EMISSION_RATE_PER_MONTH = 0.01425 -- 1.425% monthly rate
 PERIODS_PER_MONTH = 8760          -- number of 5-minute periods in a month (43800/5)
+PRECISION_FACTOR = bint(10 ^ 16)  -- calculating emissions
+
 local PRE_MINT = 5050
 
 -- State variables
@@ -257,13 +259,12 @@ local function calculateStakerAllocations(totalEmission)
   local totalStakeWeight = bint.zero()
   local emissionBint = bint(totalEmission)
 
-  -- Calculate total weighted stake across all tokens
+  -- First pass: calculate total weighted stake
   for token, stakersMap in pairs(Stakers) do
     local tokenName = TokenName(token)
     if tokenName and tokenWeights[tokenName] then
       local tokenWeight = bint(tokenWeights[tokenName])
       for _, amount in pairs(stakersMap) do
-        -- Convert amount to bint before multiplication
         totalStakeWeight = totalStakeWeight + (bint(amount) * tokenWeight)
       end
     end
@@ -274,26 +275,71 @@ local function calculateStakerAllocations(totalEmission)
     return allocations
   end
 
-  -- Calculate each staker's allocation
+
+  -- Track rounding errors to distribute later
+  local totalAllocated = bint.zero()
+
+  -- Second pass: calculate individual allocations with higher precision
   for token, stakersMap in pairs(Stakers) do
     local tokenName = TokenName(token)
     if tokenName and tokenWeights[tokenName] then
       local tokenWeight = bint(tokenWeights[tokenName])
       for staker, amount in pairs(stakersMap) do
         local stakerWeight = bint(amount) * tokenWeight
-        -- Use multiplication before division to maintain precision
-        -- Multiply by a large factor first, then divide, then adjust back
-        local scaleFactor = bint(10 ^ 8)
+
+        -- Calculate allocation with higher precision
+        -- First multiply by emission and precision factor before division
         local allocation = bint.__idiv(
-          (emissionBint * stakerWeight * scaleFactor),
-          (totalStakeWeight * scaleFactor)
+          (emissionBint * stakerWeight * PRECISION_FACTOR),
+          (totalStakeWeight)
         )
 
-        if not allocations[staker] then
-          allocations[staker] = '0'
+        -- Remove precision factor
+        allocation = bint.__idiv(allocation, PRECISION_FACTOR)
+
+        -- Track total allocated
+        totalAllocated = totalAllocated + allocation
+
+        -- Store allocation
+        if allocation > bint.zero() then
+          if not allocations[staker] then
+            allocations[staker] = '0'
+          end
+          allocations[staker] = utils.toBalanceValue(bint(allocations[staker]) + allocation)
         end
-        allocations[staker] = utils.toBalanceValue(bint(allocations[staker]) + allocation)
       end
+    end
+  end
+
+  -- Distribute any remaining dust from rounding (if any)
+  local remainingEmission = emissionBint - totalAllocated
+  if remainingEmission > bint.zero() then
+    -- Find the staker with the highest stake to give them the dust
+    local highestStaker = nil
+    local highestStake = bint.zero()
+
+    for token, stakersMap in pairs(Stakers) do
+      local tokenName = TokenName(token)
+      if tokenName and tokenWeights[tokenName] then
+        local tokenWeight = bint(tokenWeights[tokenName])
+        for staker, amount in pairs(stakersMap) do
+          local stakerWeight = bint(amount) * tokenWeight
+          if stakerWeight > highestStake then
+            highestStake = stakerWeight
+            highestStaker = staker
+          end
+        end
+      end
+    end
+
+    -- Add remaining dust to highest staker's allocation
+    if highestStaker then
+      if not allocations[highestStaker] then
+        allocations[highestStaker] = '0'
+      end
+      allocations[highestStaker] = utils.toBalanceValue(
+        bint(allocations[highestStaker]) + remainingEmission
+      )
     end
   end
 
@@ -394,9 +440,9 @@ Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get
         Target = msg.From,
         Action = 'Stake-Ownership',
         Staker = staker,
-        ['Ownership-Percentage'] = '0',
+        ['Ownership-Percentage'] = '0.000000',
         Data = json.encode({
-          percentage = '0',
+          percentage = '0.000000',
           stakerWeight = '0',
           totalWeight = '0'
         })
@@ -404,20 +450,23 @@ Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get
       return
     end
 
-    -- Calculate ownership percentage using utils helpers
-    local ownershipPercentage = utils.divide(
-      utils.multiply(utils.toBalanceValue(stakerWeight), '100'),
-      utils.toBalanceValue(totalStakeWeight)
-    )
+    -- Calculate ownership percentage with 6 decimal places of precision
+    -- Multiply by 10^8 before division to maintain precision, then format result
+    local scaledStakerWeight = bint(utils.toBalanceValue(stakerWeight)) * bint(100 * PRECISION_FACTOR)
+    local ownershipPercentageBint = bint.__idiv(scaledStakerWeight, bint(utils.toBalanceValue(totalStakeWeight)))
+
+    -- Convert to string with proper decimal places
+    local ownershipPercentageStr = string.format('%.6f',
+      tonumber(utils.toBalanceValue(ownershipPercentageBint)) / PRECISION_FACTOR)
 
     -- Send response with ownership details
     Send({
       Target = msg.From,
       Action = 'Stake-Ownership',
       Staker = staker,
-      ['Ownership-Percentage'] = ownershipPercentage,
+      ['Ownership-Percentage'] = ownershipPercentageStr,
       Data = json.encode({
-        percentage = ownershipPercentage,
+        percentage = ownershipPercentageStr,
         stakerWeight = utils.toBalanceValue(stakerWeight),
         totalWeight = utils.toBalanceValue(totalStakeWeight)
       })
