@@ -75,14 +75,18 @@ Denomination = Denomination or 8
 ---@type string
 TotalSupply = TotalSupply or utils.toBalanceValue(PRE_MINT * 10 ^ Denomination)
 
+
+
 --[[
     Internal balance calculation is handled in "gons"
     TotalGons is a multiple of InitialSupply so that GonsPerToken is an integer.
     Use the highest integer value for TotalGons for max granularity.
    ]]
----@type string
-TotalGons = TotalGons or utils.toBalanceValue(bint.maxinteger() - (bint.maxinteger() % bint(TotalSupply)))
 
+TOTAL_THEORETICAL_SUPPLY = TOTAL_THEORETICAL_SUPPLY or
+  utils.toBalanceValue(bint(21000000) * bint(10) ^ Denomination) -- 21M tokens with 8 decimal places
+---@type string
+TotalGons = TotalGons or utils.toBalanceValue(bint(TOTAL_THEORETICAL_SUPPLY) * bint(10 ^ 18))
 
 ---@type Bint
 GonsPerToken = GonsPerToken or bint.zero()
