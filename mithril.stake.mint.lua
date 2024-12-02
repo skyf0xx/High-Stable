@@ -18,9 +18,18 @@ CurrentSupply = CurrentSupply or PRE_MINT
 LastMintTimestamp = LastMintTimestamp or 0
 
 -- caution - allowedtokens should be append only
-local allowedTokens = { agent_qar_lp = 'lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM', }
-local allowedTokensNames = { agent_qar_lp = 'Agent/ QAR LP', }
-local tokenWeights = { agent_qar_lp = '1' }
+local allowedTokens = {
+  agent_qar_lp = 'lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM',
+  qar = 'NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'
+}
+local allowedTokensNames = {
+  agent_qar_lp = 'Agent/ QAR LP',
+  qar = 'qAR'
+}
+local tokenWeights = {
+  agent_qar_lp = '1',
+  qar = '2600'
+}
 
 
 --[[
