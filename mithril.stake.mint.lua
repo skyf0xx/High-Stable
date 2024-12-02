@@ -37,7 +37,7 @@ local tokenWeights = {
 ]]
 ---@return table<string, table>
 function UpdateAllowedTokens()
-  local stakers = {}
+  local stakers = Stakers
   for _, token in pairs(allowedTokens) do
     if not stakers[token] then stakers[token] = {} end
   end
