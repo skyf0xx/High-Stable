@@ -171,9 +171,7 @@ Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
 --
 Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), function(msg)
   -- Check if current time is after transfer lock period
-  assert(
-    (os.time() >= TRANSFER_LOCK_TIMESTAMP or msg.From == ao.id or msg.From == 'bxpz3u2USXv8Ictxb0aso3l8V9UTimaiGp9henzDsl8'),
-    'Transfers are locked until February 28, 2025 00:00:00 UTC')
+
 
   assert(type(msg.Recipient) == 'string', 'Recipient is required!')
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
