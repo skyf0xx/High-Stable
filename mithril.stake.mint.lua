@@ -3,6 +3,14 @@ local bint = require('.bint')(256)
 local tableUtils = require('.utils')
 local json = require('json')
 
+local function countTableElements(t)
+  local count = 0
+  for _ in pairs(t) do
+    count = count + 1
+  end
+  return count
+end
+
 -- Constants
 CRON_CALLER = '2UKQzSseAChbZpIiFmOrSUk2uhRzUySL5oAtTbjiNr4'
 TOKEN_OWNER = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
@@ -479,6 +487,88 @@ Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get
         stakerWeight = utils.toBalanceValue(stakerWeight),
         totalWeight = utils.toBalanceValue(totalStakeWeight)
       })
+    })
+  end
+)
+
+-- Get number of unique stakers across all tokens
+Handlers.add('get-unique-stakers',
+  Handlers.utils.hasMatchingTag('Action', 'Get-Unique-Stakers'),
+  function(msg)
+    local uniqueStakers = {}
+    for token, stakersMap in pairs(Stakers) do
+      for staker, balance in pairs(stakersMap) do
+        -- Only count stakers with positive balance
+        if bint(balance) > bint.zero() then
+          uniqueStakers[staker] = true
+        end
+      end
+    end
+
+    msg.reply({
+      Action = 'Unique-Stakers',
+      Data = tostring(countTableElements(uniqueStakers))
+    })
+  end
+)
+
+-- Get current minting rate in tokens per day
+Handlers.add('get-minting-rate',
+  Handlers.utils.hasMatchingTag('Action', 'Get-Minting-Rate'),
+  function(msg)
+    -- Get remaining supply
+    local totalSupplyBint = bint(TOTAL_SUPPLY)
+    local currentSupplyBint = bint(CurrentSupply)
+    local remainingSupply = totalSupplyBint - currentSupplyBint
+
+    -- If no supply remaining, return 0
+    if remainingSupply <= bint.zero() then
+      msg.reply({
+        Action = 'Minting-Rate',
+        Data = '0'
+      })
+      return
+    end
+
+    -- Calculate the emission rate for one day
+    -- EMISSION_RATE_PER_MONTH is 0.01425 (1.425%)
+    -- There are 288 5-minute periods in a day (24 * 60 / 5)
+    local periodRateFixed = math.floor((EMISSION_RATE_PER_MONTH / PERIODS_PER_MONTH) * 10 ^ 8)
+    local periodRateBint = bint(periodRateFixed)
+
+    -- Calculate daily emission: remainingSupply * (periodRate * 288)
+    local dailyRate = bint.__idiv(remainingSupply * periodRateBint * bint(288), bint(10 ^ 8))
+
+    msg.reply({
+      Action = 'Minting-Rate',
+      Data = utils.toBalanceValue(dailyRate)
+    })
+  end
+)
+
+-- Get token staking breakdown
+Handlers.add('get-token-stakes',
+  Handlers.utils.hasMatchingTag('Action', 'Get-Token-Stakes'),
+  function(msg)
+    local tokenStats = {}
+
+    for token, stakersMap in pairs(Stakers) do
+      local totalStaked = '0'
+      for _, amount in pairs(stakersMap) do
+        totalStaked = utils.add(totalStaked, amount)
+      end
+
+      table.insert(tokenStats, {
+        address = token,
+        name = allowedTokensNames[TokenName(token)],
+        total_staked = totalStaked,
+        num_stakers = countTableElements(stakersMap)
+      })
+    end
+
+    msg.reply({
+      Action = 'Token-Stakes',
+      Data = json.encode(tokenStats)
     })
   end
 )
