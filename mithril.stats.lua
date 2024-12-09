@@ -10,7 +10,7 @@ local PRICE_TARGET = 'bxpz3u2USXv8Ictxb0aso3l8V9UTimaiGp9henzDsl8'
 local TOKEN_DENOMINATION = 8
 local PRICE_DENOMINATION = 6
 
-local TRUSTED_CRON = 'xxxxxxx'
+local TRUSTED_CRON = 'iAEDZ6Y_wpEcksEzypVYhI01ShQIHCIvwEQ7NA3-2KA'
 
 -- Helper function to convert for calculations and return string
 local function convertTokenAmount(amount)
