@@ -142,7 +142,7 @@ local function insertTokenStakes(stakes)
       stake.timestamp,
       stake.address,
       stake.name,
-      convertTokenAmount(stake.total_staked),
+      stake.total_staked,
       stake.num_stakers
     )
     stmt:step()
