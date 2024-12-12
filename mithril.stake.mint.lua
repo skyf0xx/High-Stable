@@ -99,7 +99,7 @@ end
 
 --[[
      Handler to update allowed tokens.
-     Update allowedTokens array then call this handler
+     Update allowedTokens arrays then call this handler
    ]]
 --
 Handlers.add('update-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Update-Allowed-Tokens'),
