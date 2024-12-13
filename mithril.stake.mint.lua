@@ -28,15 +28,27 @@ LastMintTimestamp = LastMintTimestamp or 0
 -- caution - allowedtokens should be append only
 local allowedTokens = {
   agent_qar_lp = 'lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM',
-  qar = 'NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'
+  qar = 'NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8',
+  war = 'xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10',
+  frp = 'NgPF445swQfqq0cuM1nNQaVzg05sq8eX5L4YxS-6oDo',
+  qar_nab_lp = 'NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg',
+  wusdc_nab_lp = 'bxpz3u2USXv8Ictxb0aso3l8V9UTimaiGp9henzDsl8',
 }
 local allowedTokensNames = {
-  agent_qar_lp = 'Agent/ QAR LP',
-  qar = 'qAR'
+  agent_qar_lp = 'Botega LP qAR/AGENT',
+  qar = 'qAR',
+  war = 'wAR',
+  frp = 'Fren Points',
+  qar_nab_lp = 'Botega LP qAR/NAB',
+  wusdc_nab_lp = 'Botega LP wUSDC/NAB',
 }
 local tokenWeights = {
   agent_qar_lp = '1',
-  qar = '2600'
+  qar = '2600',
+  war = '2600',
+  frp = '260',
+  qar_nab_lp = '1',
+  wusdc_nab_lp = '1',
 }
 
 
@@ -53,7 +65,7 @@ function UpdateAllowedTokens()
 end
 
 Stakers = Stakers or UpdateAllowedTokens()
-
+StakersBackup = StakersBackup or Stakers --used before calling UpdateAllowedTokens just for safety
 
 --[[
   utils helper functions to remove the bint complexity.
