@@ -55,8 +55,11 @@ local tokenWeights = {
   qar = '2600',
   war = '2600',
   frp = '260',
-  qar_nab_lp = '1',
-  wusdc_nab_lp = '1',
+  qar_nab_lp = '36000',
+  war_nab_lp = '36000',
+  wusdc_nab_lp = '10000',
+  nab_war_ps_lp = '180',
+  qar_nab_ps_lp = '36000',
 }
 
 
