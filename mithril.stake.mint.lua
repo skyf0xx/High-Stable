@@ -238,7 +238,8 @@ Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get
       Target = msg.From,
       Action = 'Staked-Balances',
       Staker = staker,
-      Data = json.encode(balances)
+      Data = json.encode(balances),
+      Weights = json.encode(tokenWeights)
     })
   end)
 
