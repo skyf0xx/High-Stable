@@ -12,7 +12,7 @@ local function countTableElements(t)
 end
 
 -- Constants
-CRON_CALLER = '2UKQzSseAChbZpIiFmOrSUk2uhRzUySL5oAtTbjiNr4'
+CRON_CALLER = 'MlOkQg3_PSmUJOUTqxQdmzopMBjn0phrvEOHsdyuevQ'
 TOKEN_OWNER = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 TOTAL_SUPPLY = 21000000 * 10 ^ 8  -- 21M tokens with 8 decimal places
 EMISSION_RATE_PER_MONTH = 0.01425 -- 1.425% monthly rate
