@@ -55,7 +55,7 @@ local utils = {
 Variant = '0.0.3'
 
 -- token should be idempotent and not change previous state updates
-local totalSupply = bint(21000000)
+local totalSupply = bint(26000000)
 Denomination = Denomination or 12
 Balances = Balances or { [ao.id] = utils.toBalanceValue(totalSupply * bint(10) ^ Denomination) }
 TotalSupply = TotalSupply or utils.toBalanceValue(totalSupply * bint(10) ^ Denomination)
