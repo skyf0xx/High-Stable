@@ -59,8 +59,8 @@ local totalSupply = bint(21000000)
 Denomination = Denomination or 12
 Balances = Balances or { [ao.id] = utils.toBalanceValue(totalSupply * bint(10) ^ Denomination) }
 TotalSupply = TotalSupply or utils.toBalanceValue(totalSupply * bint(10) ^ Denomination)
-Name = Name or 'Fren Points'
-Ticker = Ticker or 'FRP'
+Name = Name or 'Fren'
+Ticker = Ticker or 'FRN'
 Logo = Logo or 'AVzJGQvDkDoVzbF_JPM7dzHIuxvo82VX0bO1cAJQmbA'
 
 --[[
