@@ -33,6 +33,8 @@ local PRECISION_FACTOR = bint(10 ^ Denomination)                        -- For p
 ]]
 Handlers.add('update-supply', Handlers.utils.hasMatchingTag('Action', 'Cron'),
   function(msg)
+    assert(bint(CurrentSupply) > bint(FINAL_SUPPLY), 'Current supply must be greater than final supply')
+
     -- Calculate new supply with burn rate
     -- First convert rate to fixed point number with 8 decimal places
     local burnRateFixed = math.floor((1 - WEEKLY_BURN_RATE) * 10 ^ Denomination)
