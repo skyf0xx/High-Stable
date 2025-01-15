@@ -1,6 +1,5 @@
 local bint = require('.bint')(256)
 local MonetaryPolicyProcess = '_disabled_' --enabled after Transfer lock period
-local PRE_MINT = 5050
 
 
 --[[
@@ -72,7 +71,7 @@ Variant = '0.0.3'
 Denomination = Denomination or 8
 --total MTH supply (externally displayed balance)
 ---@type string
-TotalSupply = TotalSupply or utils.toBalanceValue(PRE_MINT * 10 ^ Denomination)
+TotalSupply = TotalSupply or utils.toBalanceValue(42000000 * 10 ^ Denomination)
 
 
 
