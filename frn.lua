@@ -82,7 +82,7 @@ TotalSupply = TotalSupply or utils.toBalanceValue(42000000 * 10 ^ Denomination)
    ]]
 
 TOTAL_THEORETICAL_SUPPLY = TOTAL_THEORETICAL_SUPPLY or
-  utils.toBalanceValue(bint(21000000) * bint(10) ^ Denomination) -- 21M tokens with 8 decimal places
+  utils.toBalanceValue(bint(42000000) * bint(10) ^ Denomination) -- 42M tokens with 8 decimal places
 ---@type string
 TotalGons = TotalGons or utils.toBalanceValue(bint(TOTAL_THEORETICAL_SUPPLY) * bint(10 ^ 18))
 
