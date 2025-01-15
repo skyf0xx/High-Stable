@@ -95,9 +95,9 @@ end
 
 Balances = Balances or { [ao.id] = TotalGons }
 
-Name = Name or 'Number Always Bigger'
-Ticker = Ticker or 'NAB'
-Logo = Logo or 'JrGTvRHumJaXi3Y0RKS3qOdOofTo3v6FjyzI9wSpIoY'
+Name = Name or 'Fren'
+Ticker = Ticker or 'FRN'
+Logo = Logo or 'AVzJGQvDkDoVzbF_JPM7dzHIuxvo82VX0bO1cAJQmbA'
 
 --[[
      Add handlers for each incoming Action defined by the ao Standard Token Specification
