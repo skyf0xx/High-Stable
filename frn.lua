@@ -1,6 +1,5 @@
 local bint = require('.bint')(256)
 local MonetaryPolicyProcess = '_disabled_' --enabled after Transfer lock period
-local MINT_PROCESS = 'KbUW8wkZmiEWeUG0-K8ohSO82TfTUdz6Lqu5nxDoQDc'
 local PRE_MINT = 5050
 
 
@@ -262,59 +261,7 @@ Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(m
 end)
 
 
---[[
-    Mint from Stake
-   ]]
---
-Handlers.add('mint-from-stake', Handlers.utils.hasMatchingTag('Action', 'Mint-From-Stake'), function(msg)
-  assert(MINT_PROCESS == msg.From, 'Request is not from the trusted Mint Process!')
 
-  -- Parse the JSON data containing mint requests
-  local mintRequests = json.decode(msg.Data)
-  assert(type(mintRequests) == 'table', 'Mint requests must be a valid array')
-
-  -- Track total minted amount to update supply
-  local totalMinted = '0'
-
-  -- Process each mint request
-  for _, request in ipairs(mintRequests) do
-    local address = request.address
-    local amount = request.amount
-
-    assert(type(address) == 'string', 'Mint request address must be a string')
-    assert(type(amount) == 'string', 'Mint request amount must be a string')
-    assert(bint(0) < bint(amount), 'Mint amount must be greater than zero')
-
-    -- Initialize balance if needed
-    if not Balances[address] then
-      Balances[address] = '0'
-    end
-
-    -- Convert MTH amount to gons for internal accounting
-    local gonAmount = utils.toBalanceValue(bint(amount) * GonsPerToken)
-
-    -- Update balance
-    Balances[address] = utils.add(Balances[address], gonAmount)
-
-    -- Add to total minted
-    totalMinted = utils.add(totalMinted, amount)
-    --[[ commented out for now (gas implications)
-    Send({
-      Target = address,
-      Action = 'Credit-Notice',
-      Sender = ao.id,
-      Quantity = amount,
-      Data = Colors.gray ..
-        'You received ' ..
-        Colors.blue .. amount .. Colors.gray .. ' MTH from staking rewards' .. Colors.reset
-    })
-    ]]
-    -- Send credit notice to recipient
-  end
-
-  -- Update total supply
-  TotalSupply = utils.add(TotalSupply, totalMinted)
-end)
 
 --[[
      Total Supply
