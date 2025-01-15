@@ -44,10 +44,13 @@ Handlers.add('update-supply', Handlers.utils.hasMatchingTag('Action', 'Cron'),
     -- Check if new supply would be below final supply
     if bint(newSupply) > bint(FINAL_SUPPLY) then
       CurrentSupply = newSupply
-      ao.send({
-        Target = TOKEN_OWNER,
-        Action = 'Rebase',
-        NewSupply = newSupply
-      })
+    else
+      CurrentSupply = FINAL_SUPPLY
     end
+
+    ao.send({
+      Target = TOKEN_OWNER,
+      Action = 'Rebase',
+      NewSupply = newSupply
+    })
   end)
