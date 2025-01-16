@@ -54,9 +54,10 @@ Handlers.add('update-supply', Handlers.utils.hasMatchingTag('Action', 'Cron'),
       CurrentSupply = FINAL_SUPPLY
     end
 
+
     ao.send({
       Target = TOKEN_OWNER,
       Action = 'Rebase',
-      NewSupply = newSupply
+      NewSupply = CurrentSupply
     })
   end)
