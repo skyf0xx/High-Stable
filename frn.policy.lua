@@ -24,7 +24,7 @@ local utils = {
 
 
 local Denomination = 8
-local StartingSupply = utils.toBalanceValue(37500000 * 10 ^ Denomination)
+local StartingSupply = utils.toBalanceValue(77000000 * 10 ^ Denomination)
 CurrentSupply = CurrentSupply or StartingSupply
 
 -- Constants
