@@ -71,7 +71,7 @@ Variant = '0.0.3'
 Denomination = Denomination or 8
 --total MTH supply (externally displayed balance)
 ---@type string
-TotalSupply = TotalSupply or utils.toBalanceValue(37500000 * 10 ^ Denomination)
+TotalSupply = TotalSupply or utils.toBalanceValue(77000000 * 10 ^ Denomination)
 
 
 
@@ -82,7 +82,7 @@ TotalSupply = TotalSupply or utils.toBalanceValue(37500000 * 10 ^ Denomination)
    ]]
 
 TOTAL_THEORETICAL_SUPPLY = TOTAL_THEORETICAL_SUPPLY or
-  utils.toBalanceValue(bint(37500000) * bint(10) ^ Denomination) -- 37.5M tokens with 8 decimal places
+  utils.toBalanceValue(bint(77000000) * bint(10) ^ Denomination) -- 77M tokens with 8 decimal places
 ---@type string
 TotalGons = TotalGons or utils.toBalanceValue(bint(TOTAL_THEORETICAL_SUPPLY) * bint(10 ^ 18))
 
