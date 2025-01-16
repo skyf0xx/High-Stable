@@ -45,9 +45,9 @@ Handlers.add('update-supply', Handlers.utils.hasMatchingTag('Action', 'Cron'),
     -- First convert rate to fixed point number with 8 decimal places
     local burnRateFixed = math.floor((1 - WEEKLY_BURN_RATE) * 10 ^ Denomination)
     local newSupply = utils.multiply(CurrentSupply, burnRateFixed)
-    newSupply = math.floor(utils.divide(newSupply, tostring(PRECISION_FACTOR)))
-
+    newSupply = utils.divide(newSupply, tostring(PRECISION_FACTOR))
     -- Check if new supply would be below final supply
+
     if bint(newSupply) > bint(FINAL_SUPPLY) then
       CurrentSupply = newSupply
     else
