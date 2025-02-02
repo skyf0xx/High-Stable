@@ -51,10 +51,10 @@ local allowedTokensNames = {
 
 -- weight forumula for lp: 2*(1/ total lp tokens per 1AR)
 local tokenWeights = {
-  agent_qar_lp = '1',
+  agent_qar_lp = '0', --discontinued
   qar = '2600',
   war = '2600',
-  frp = '260',
+  frp = '0', --discontinued
   qar_nab_lp = '36000',
   war_nab_lp = '36000',
   wusdc_nab_lp = '10000',
