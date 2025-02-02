@@ -36,7 +36,10 @@ local allowedTokens = {
   wusdc_nab_lp = 'bxpz3u2USXv8Ictxb0aso3l8V9UTimaiGp9henzDsl8',
   nab_war_ps_lp = 'BGBUvr5dVJrgmmuPN6G56OIuNSHUWO2y7bZyPlAjK8Q',
   qar_nab_ps_lp = '230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M',
+  mint = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0',
 }
+
+
 local allowedTokensNames = {
   agent_qar_lp = 'Botega LP qAR/AGENT',
   qar = 'qAR',
@@ -47,6 +50,8 @@ local allowedTokensNames = {
   wusdc_nab_lp = 'Botega LP wUSDC/NAB',
   nab_war_ps_lp = 'Permaswap LP NAB/wAR',
   qar_nab_ps_lp = 'Permaswap LP qAR/NAB',
+  mint = 'MINT'
+
 }
 
 -- weight forumula for lp: 2*(1/ total lp tokens per 1AR)
@@ -60,6 +65,7 @@ local tokenWeights = {
   wusdc_nab_lp = '10000',
   nab_war_ps_lp = '180',
   qar_nab_ps_lp = '36000',
+  mint = '260'
 }
 
 
