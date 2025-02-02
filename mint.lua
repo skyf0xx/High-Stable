@@ -1,5 +1,5 @@
 local bint = require('.bint')(256)
-local MonetaryPolicyProcess = '_disabled_' --enabled after Transfer lock period
+local MonetaryPolicyProcess = '__disabled__' --enabled after Transfer lock period
 
 
 --[[
@@ -95,9 +95,9 @@ end
 
 Balances = Balances or { [ao.id] = TotalGons }
 
-Name = Name or 'Fren'
-Ticker = Ticker or 'FRN'
-Logo = Logo or 'AVzJGQvDkDoVzbF_JPM7dzHIuxvo82VX0bO1cAJQmbA'
+Name = Name or 'MINT'
+Ticker = Ticker or 'MINT'
+Logo = Logo or 'P9EWU8qgkvM95Y-HTp8U36i9_2ZzKx3kWtJduCEIKgk'
 
 --[[
      Add handlers for each incoming Action defined by the ao Standard Token Specification
