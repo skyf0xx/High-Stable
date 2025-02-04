@@ -46,7 +46,8 @@ end
 
 
 -- Initialize token configurations
-Handlers.once('init', { Action = 'Initialize' }, function()
+Handlers.once('init', { Action = 'Initialize' }, function(msg)
+  assert(msg.From == ao.id, 'Caller is not authorized!')
   updateTokenConfigs()
 end)
 
@@ -98,6 +99,7 @@ local utils = {
 --
 Handlers.add('update-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Update-Allowed-Tokens'),
   function(msg)
+    assert(msg.From == ao.id, 'Caller is not authorized!')
     Stakers = UpdateAllowedTokens()
     Send({
       Target = msg.From,
