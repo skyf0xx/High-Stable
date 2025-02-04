@@ -51,8 +51,6 @@ Handlers.once('init', { Action = 'Initialize' }, function()
   updateTokenConfigs()
 end)
 
---[[
-
 
 --[[
   Initialize the staker table. stakers[token][user] = balance
@@ -60,8 +58,8 @@ end)
 ---@return table<string, table>
 function UpdateAllowedTokens()
   local stakers = Stakers
-  for _, token in pairs(AllowedTokens) do
-    if not stakers[token] then stakers[token] = {} end
+  for address, _ in pairs(AllowedTokens) do
+    if not stakers[address] then stakers[address] = {} end
   end
   return stakers
 end
@@ -94,23 +92,6 @@ local utils = {
   end
 }
 
-
---[[
-     Get the name of the token
-   ]]
---
----@param address string
----@return string
-function TokenName(address)
-  for token, addr in pairs(AllowedTokens) do
-    if addr == address then
-      return token
-    end
-  end
-
-  return ''
-end
-
 --[[
      Handler to update allowed tokens.
      Update AllowedTokens arrays then call this handler
@@ -135,9 +116,9 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     -- credit notice is sent by the token process to the staking contract
     local token = msg.From
     local quantity = msg.Quantity
-    local stakeable = tableUtils.includes(token, tableUtils.values(AllowedTokens))
+    local stakeable = AllowedTokens[token] ~= nil
     local sender = msg.Sender
-    local tokenName = TokenName(token)
+    local tokenName = AllowedTokensNames[token]
 
     --don't bother to refund unstakeable tokens - to prevent being drained through spurious fees
     assert(stakeable, 'Token: ' .. token .. ' is not stakable and was ignored!')
@@ -166,9 +147,9 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
   function(msg)
     local from = msg.From
     local token = msg.Tags['Token']
-    local stakeable = tableUtils.includes(token, tableUtils.values(AllowedTokens))
+    local stakeable = AllowedTokens[token] ~= nil
     local quantity = Stakers[token][from] or '0'
-    local tokenName = TokenName(token)
+    local tokenName = AllowedTokensNames[token]
 
     assert(stakeable, 'Token: ' .. token .. ' is not stakable and was ignored!')
     assert(bint(0) < bint(quantity), 'You need to have more than zero staked tokens!')
@@ -206,20 +187,19 @@ Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get
     -- Initialize result array to store balances
     local balances = {}
 
-    -- Loop through AllowedTokensNames to maintain consistent order
-    for token, name in pairs(AllowedTokensNames) do
-      local tokenAddress = AllowedTokens[token]
+    -- Loop through AllowedTokens to maintain consistent order
+    for address, _ in pairs(AllowedTokens) do
       local amount = '0' -- Default to '0' for unstaked tokens
 
       -- If there's a staked balance for this token, use it
-      if Stakers[tokenAddress] and Stakers[tokenAddress][staker] then
-        amount = Stakers[tokenAddress][staker]
+      if Stakers[address] and Stakers[address][staker] then
+        amount = Stakers[address][staker]
       end
 
-      -- Add entry to balances array with token address included
+      -- Add entry to balances array
       table.insert(balances, {
-        name = name,
-        address = tokenAddress,
+        name = AllowedTokensNames[address],
+        address = address,
         amount = amount
       })
     end
@@ -293,9 +273,8 @@ local function calculateStakerAllocations(totalEmission)
 
   -- First pass: calculate total weighted stake
   for token, stakersMap in pairs(Stakers) do
-    local tokenName = TokenName(token)
-    if tokenName and TokenWeights[tokenName] then
-      local tokenWeight = bint(TokenWeights[tokenName])
+    if TokenWeights[token] then
+      local tokenWeight = bint(TokenWeights[token])
       for _, amount in pairs(stakersMap) do
         totalStakeWeight = totalStakeWeight + (bint(amount) * tokenWeight)
       end
@@ -313,9 +292,8 @@ local function calculateStakerAllocations(totalEmission)
 
   -- Second pass: calculate individual allocations with higher precision
   for token, stakersMap in pairs(Stakers) do
-    local tokenName = TokenName(token)
-    if tokenName and TokenWeights[tokenName] then
-      local tokenWeight = bint(TokenWeights[tokenName])
+    if TokenWeights[token] then
+      local tokenWeight = bint(TokenWeights[token])
       for staker, amount in pairs(stakersMap) do
         local stakerWeight = bint(amount) * tokenWeight
 
@@ -351,9 +329,8 @@ local function calculateStakerAllocations(totalEmission)
     local highestStake = bint.zero()
 
     for token, stakersMap in pairs(Stakers) do
-      local tokenName = TokenName(token)
-      if tokenName and TokenWeights[tokenName] then
-        local tokenWeight = bint(TokenWeights[tokenName])
+      if TokenWeights[token] then
+        local tokenWeight = bint(TokenWeights[token])
         for staker, amount in pairs(stakersMap) do
           local stakerWeight = bint(amount) * tokenWeight
           if stakerWeight > highestStake then
@@ -445,12 +422,9 @@ Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get
     local stakerWeight = bint.zero()
 
     -- Calculate total weighted stake across all tokens
-    for tokenAddress, stakersMap in pairs(Stakers) do
-      -- Get token name for weight lookup
-      local tokenName = TokenName(tokenAddress)
-      -- Ensure we have a valid token weight
-      if tokenName and TokenWeights[tokenName] then
-        local tokenWeight = bint(TokenWeights[tokenName])
+    for token, stakersMap in pairs(Stakers) do
+      if TokenWeights[token] then
+        local tokenWeight = bint(TokenWeights[token])
 
         -- Calculate weights for all stakers
         for addr, amount in pairs(stakersMap) do
@@ -575,7 +549,7 @@ Handlers.add('get-token-stakes',
 
       table.insert(tokenStats, {
         address = token,
-        name = AllowedTokensNames[TokenName(token)],
+        name = AllowedTokensNames[token],
         total_staked = totalStaked,
         num_stakers = countTableElements(stakersMap)
       })
