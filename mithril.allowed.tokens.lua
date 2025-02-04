@@ -2,7 +2,7 @@ local json = require('json')
 
 -- Define the token configurations
 -- caution - allowedtokens should be append only
-local allowedTokens = {
+AllowedTokens = AllowedTokens or {
   agent_qar_lp = 'lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM',
   qar = 'NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8',
   war = 'xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10',
@@ -16,7 +16,7 @@ local allowedTokens = {
 }
 
 
-local allowedTokensNames = {
+AllowedTokensNames = AllowedTokensNames or {
   agent_qar_lp = 'Botega LP qAR/AGENT',
   qar = 'qAR',
   war = 'wAR',
@@ -31,7 +31,7 @@ local allowedTokensNames = {
 }
 
 -- weight forumula for lp: 2*(1/ total lp tokens per 1AR)
-local tokenWeights = {
+TokenWeights = TokenWeights or {
   agent_qar_lp = '0', --discontinued
   qar = '2600',
   war = '2600',
@@ -51,9 +51,9 @@ Handlers.add('get-token-configs',
     msg.reply({
       Action = 'Token-Configs',
       Data = json.encode({
-        allowedTokens = allowedTokens,
-        allowedTokensNames = allowedTokensNames,
-        tokenWeights = tokenWeights
+        allowedTokens = AllowedTokens,
+        allowedTokensNames = AllowedTokensNames,
+        tokenWeights = TokenWeights
       })
     })
   end
