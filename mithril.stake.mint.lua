@@ -1,6 +1,5 @@
 Variant = '0.0.1'
 local bint = require('.bint')(256)
-local tableUtils = require('.utils')
 local json = require('json')
 
 local function countTableElements(t)
