@@ -587,3 +587,28 @@ Handlers.add('get-token-stakes',
     })
   end
 )
+
+
+-- Refresh token configs (called by cron)
+Handlers.add('refresh-token-configs',
+  Handlers.utils.hasMatchingTag('Action', 'Refresh-Token-Configs'),
+  function(msg)
+    Send({
+      Target = TOKEN_CONFIG_PROCESS,
+      Action = 'Get-Token-Configs'
+    }).onReply(function(reply)
+      local configs = json.decode(reply.Data)
+      AllowedTokens = configs.allowedTokens
+      AllowedTokensNames = configs.allowedTokensNames
+      TokenWeights = configs.tokenWeights
+
+      -- Initialize staker entries for any new tokens
+      Stakers = UpdateAllowedTokens()
+
+      msg.reply({
+        Action = 'Token-Configs-Refreshed',
+        Data = 'Token configurations have been refreshed and new tokens initialized'
+      })
+    end)
+  end
+)
