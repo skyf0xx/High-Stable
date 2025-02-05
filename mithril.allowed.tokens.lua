@@ -134,22 +134,26 @@ Handlers.add('register-token',
       Target = tokenAddress,
       Action = 'Info'
     }).onReply(function(reply)
-      -- Validate the response
-      if not reply.Name then
-        msg.reply({
-          Action = 'Register-Token-Result',
-          Success = false,
-          Error = 'Failed to get token information',
-          Data = json.encode({
-            address = tokenAddress
-          })
-        })
-        return
+      -- Extract name from tags
+      local tokenName
+      local hasNABProcess = false
+
+      for _, tag in pairs(reply.Tags) do
+        if tag.name == 'Name' then
+          tokenName = tag.value
+        end
+        if tag.value == NABProcess then
+          hasNABProcess = true
+        end
       end
+
+      -- Validate the response
+      assert(tokenName, 'Token info missing required Name tag')
+      assert(hasNABProcess, 'Token must reference NAB process in tags')
 
       -- Register the new token
       AllowedTokens[tokenAddress] = tokenAddress
-      AllowedTokensNames[tokenAddress] = reply.Name
+      AllowedTokensNames[tokenAddress] = tokenName
       TokenWeights[tokenAddress] = '0'
       table.insert(LPTokens, tokenAddress)
 
@@ -160,7 +164,7 @@ Handlers.add('register-token',
         Success = true,
         Data = json.encode({
           address = tokenAddress,
-          name = reply.Name,
+          name = tokenName,
           weight = '0'
         })
       })
