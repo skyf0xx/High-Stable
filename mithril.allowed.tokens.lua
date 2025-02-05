@@ -18,6 +18,15 @@ AllowedTokens = AllowedTokens or {
   ['SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'] = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
 }
 
+LPTokens = LPTokens or {
+  'lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM',
+  'NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg',
+  '9eM72ObMJM6o3WHi6nTldwhHsCXSKgzz1hv-FpURZB4',
+  'bxpz3u2USXv8Ictxb0aso3l8V9UTimaiGp9henzDsl8',
+  'BGBUvr5dVJrgmmuPN6G56OIuNSHUWO2y7bZyPlAjK8Q',
+  '230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M',
+}
+
 AllowedTokensNames = AllowedTokensNames or {
   ['lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM'] = 'Botega LP qAR/AGENT',
   ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'qAR',
