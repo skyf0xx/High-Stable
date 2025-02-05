@@ -113,9 +113,7 @@ Handlers.add('update-token-weights',
 
     msg.reply({
       Action = 'Token-Weights-Updated',
-      Data = json.encode({
-        weights = TokenWeights,
-      })
+      Data = 'Updated the token weights'
     })
   end
 )
