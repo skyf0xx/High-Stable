@@ -56,3 +56,47 @@ Handlers.add('get-token-configs',
     })
   end
 )
+-- Handler to register a new token
+Handlers.add('register-token',
+  Handlers.utils.hasMatchingTag('Action', 'Register-Token'),
+  function(msg)
+    -- Input validation
+    local tokenAddress = msg.Tags['Token-Address']
+    assert(type(tokenAddress) == 'string', 'Token address is required!')
+    assert(not AllowedTokens[tokenAddress], 'Token is already registered!')
+
+    -- Get token information from the token's process
+    Send({
+      Target = tokenAddress,
+      Action = 'Info'
+    }).onReply(function(reply)
+      -- Validate the response
+      if not reply.Name then
+        msg.reply({
+          Action = 'Register-Token-Result',
+          Success = false,
+          Error = 'Failed to get token information',
+          Data = json.encode({
+            address = tokenAddress
+          })
+        })
+        return
+      end
+
+      -- Register the new token
+      AllowedTokens[tokenAddress] = tokenAddress
+      AllowedTokensNames[tokenAddress] = reply.Name
+      TokenWeights[tokenAddress] = '0'
+
+      msg.reply({
+        Action = 'Register-Token-Result',
+        Success = true,
+        Data = json.encode({
+          address = tokenAddress,
+          name = reply.Name,
+          weight = '0'
+        })
+      })
+    end)
+  end
+)
