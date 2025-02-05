@@ -1,4 +1,6 @@
 local json = require('json')
+local NABProcess = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
+local TrustedCron = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 
 -- Define the token configurations
 -- caution - allowedtokens should be append only
