@@ -4,7 +4,7 @@ local TrustedCron = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 
 -- Define the token configurations
 -- caution - allowedtokens should be append only
-
+-- Beow was the initial list of allowed tokens, before they became dynamic
 AllowedTokens = AllowedTokens or {
   ['lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM'] = 'lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM',
   ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8',
