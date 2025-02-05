@@ -40,18 +40,53 @@ AllowedTokensNames = AllowedTokensNames or {
   ['SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'] = 'MINT'
 }
 
+
 TokenWeights = TokenWeights or {
   ['lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM'] = '0',
-  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = '2600',
-  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = '2600',
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = '100',
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = '100',
   ['4Aq_6sBUyEo6AlKRq6JLT9dDfYG5ThfznA_cXjwsJpM'] = '0',
-  ['NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg'] = '36000',
-  ['9eM72ObMJM6o3WHi6nTldwhHsCXSKgzz1hv-FpURZB4'] = '36000',
-  ['bxpz3u2USXv8Ictxb0aso3l8V9UTimaiGp9henzDsl8'] = '10000',
-  ['BGBUvr5dVJrgmmuPN6G56OIuNSHUWO2y7bZyPlAjK8Q'] = '180',
-  ['230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M'] = '36000',
-  ['SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'] = '260'
+  ['NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg'] = '0',
+  ['9eM72ObMJM6o3WHi6nTldwhHsCXSKgzz1hv-FpURZB4'] = '0',
+  ['bxpz3u2USXv8Ictxb0aso3l8V9UTimaiGp9henzDsl8'] = '0',
+  ['BGBUvr5dVJrgmmuPN6G56OIuNSHUWO2y7bZyPlAjK8Q'] = '0',
+  ['230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M'] = '0',
+  ['SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'] = '30'
 }
+
+-- Helper function to update token weights based on NAB balances
+local function updateTokenWeights()
+  local maxLPWeight = 1000
+
+  -- Only get balances for LP tokens
+  Send({
+    Target = NABProcess,
+    Action = 'Balances-From-Many',
+    Data = json.encode(LPTokens)
+  }).onReply(function(reply)
+    local balances = json.decode(reply.Data)
+
+    for _, tokenAddress in ipairs(LPTokens) do
+      TokenWeights[tokenAddress] = '0'
+    end
+
+    local totalBalance = 0
+    for _, balance in pairs(balances) do
+      totalBalance = totalBalance + tonumber(balance)
+    end
+
+    if totalBalance > 0 then
+      for tokenAddress, balance in pairs(balances) do
+        local balanceNum = tonumber(balance)
+        if balanceNum > 0 then
+          -- Calculate proportional weight: (balance/totalBalance) * maxLPWeight
+          local weight = math.floor((balanceNum / totalBalance) * maxLPWeight)
+          TokenWeights[tokenAddress] = tostring(weight)
+        end
+      end
+    end
+  end)
+end
 
 -- Handler to get all token configurations
 Handlers.add('get-token-configs',
@@ -67,7 +102,25 @@ Handlers.add('get-token-configs',
     })
   end
 )
--- Handler to register a new token
+
+-- Handler to update token weights (called by cron once a day)
+Handlers.add('update-token-weights',
+  Handlers.utils.hasMatchingTag('Action', 'Update-Token-Weights'),
+  function(msg)
+    assert(TrustedCron == msg.From, 'Request is not from the trusted Process!')
+
+    updateTokenWeights()
+
+    msg.reply({
+      Action = 'Token-Weights-Updated',
+      Data = json.encode({
+        weights = TokenWeights,
+      })
+    })
+  end
+)
+
+-- Handler to register a new LP token
 Handlers.add('register-token',
   Handlers.utils.hasMatchingTag('Action', 'Register-Token'),
   function(msg)
@@ -98,6 +151,9 @@ Handlers.add('register-token',
       AllowedTokens[tokenAddress] = tokenAddress
       AllowedTokensNames[tokenAddress] = reply.Name
       TokenWeights[tokenAddress] = '0'
+      table.insert(LPTokens, tokenAddress)
+
+      updateTokenWeights()
 
       msg.reply({
         Action = 'Register-Token-Result',
