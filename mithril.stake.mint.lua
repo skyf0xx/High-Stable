@@ -30,27 +30,6 @@ AllowedTokens = AllowedTokens or {}
 AllowedTokensNames = AllowedTokensNames or {}
 TokenWeights = TokenWeights or {}
 
--- Function to update token configurations
-local function updateTokenConfigs()
-  Send({
-    Target = TOKEN_CONFIG_PROCESS,
-    Action = 'Get-Token-Configs'
-  }).onReply(function(reply)
-    local configs = json.decode(reply.Data)
-    AllowedTokens = configs.allowedTokens
-    AllowedTokensNames = configs.allowedTokensNames
-    TokenWeights = configs.tokenWeights
-  end)
-end
-
-
-
--- Initialize token configurations
-Handlers.once('init', { Action = 'Initialize' }, function(msg)
-  assert(msg.From == ao.id, 'Caller is not authorized!')
-  updateTokenConfigs()
-end)
-
 
 --[[
   Initialize the staker table. stakers[token][user] = balance
