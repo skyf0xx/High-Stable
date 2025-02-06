@@ -547,6 +547,8 @@ Handlers.add('get-token-stakes',
 Handlers.add('refresh-token-configs',
   Handlers.utils.hasMatchingTag('Action', 'Refresh-Token-Configs'),
   function(msg)
+    assert(msg.From == ao.id or msg.From == TOKEN_CONFIG_PROCESS, 'Caller is not authorized!')
+
     Send({
       Target = TOKEN_CONFIG_PROCESS,
       Action = 'Get-Token-Configs'
