@@ -21,3 +21,5 @@ mint.lua --> "MINT" (SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0)
 mint.policy.lua --> "MINT Policy" (xxxxxx)
 
 maintenance.lua --> "Maintenance" (SpkZWLmuKAQ3vIK_1ErUndUxA372HxPtB5ncxa2V9VM)
+
+Note: if a process doesn't start through its alias, you can just use its address
