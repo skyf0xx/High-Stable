@@ -85,6 +85,10 @@ local function updateTokenWeights()
           TokenWeights[tokenAddress] = tostring(weight)
         end
       end
+      Send({
+        Target = STAKE_MINT_PROCESS,
+        Action = 'Refresh-Token-Configs'
+      })
     end
   end)
 end
