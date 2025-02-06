@@ -13,7 +13,7 @@ mithril.allowed.tokens.lua --> "NAB Allowed Tokens" (G3biaSUvclo3cd_1ErpPYt-VoSS
 
 cron.caller.stakers.lua --> "NAB Staking Reward Cron" (h7nm30_3nDfMrN5TRdEC80ZIUzQl-fIWWxobwews4WE) every 5 minutes
 cron.caller.stats.lua --> "Cron NAB Ecosystem Stats" (iAEDZ6Y_wpEcksEzypVYhI01ShQIHCIvwEQ7NA3-2KA) every 24 hours
-cron.caller.allowed.tokens.lua --> "Cron NAB Allowed Tokens" (pn2IDtbofqxWXyj9W6eXtdp4C7JZ1oJaM81l12ygqYc)
+cron.caller.allowed.tokens.lua --> "Cron NAB Allowed Tokens" (pn2IDtbofqxWXyj9W6eXtdp4C7JZ1oJaM81l12ygqYc) every 24 hours
 
 mithril.stats.lua --> "NAB Ecosystem Stats" (dNmk7_vhghAG06yFnRjm0IrFKPQFhqlF0pU7Bk3RmkM) NOTE: Uses WASM 64 sqlite first init is with --module=ghSkge2sIUD_F00ym5sEimC63BDBuBrq4b5OcwxOjiw
 
