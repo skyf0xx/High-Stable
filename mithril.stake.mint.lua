@@ -17,6 +17,7 @@ TOTAL_SUPPLY = 21000000 * 10 ^ 8                                     -- 21M toke
 EMISSION_RATE_PER_MONTH = 0.01425                                    -- 1.425% monthly rate
 PERIODS_PER_MONTH = 8760                                             -- number of 5-minute periods in a month (43800/5)
 PRECISION_FACTOR = bint(10 ^ 16)                                     -- calculating emissions
+TOKEN_CONFIG_PROCESS = 'G3biaSUvclo3cd_1ErpPYt-VoSSazWrKcuBlzeLkTnU' -- token config process
 
 local PRE_MINT = 5050
 
