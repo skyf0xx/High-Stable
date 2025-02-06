@@ -61,7 +61,7 @@ local function updateTokenWeights()
 
   -- Only get balances for LP tokens
   Send({
-    Target = NABProcess,
+    Target = NAB_PROCESS,
     Action = 'Balances-From-Many',
     Data = json.encode(LPTokens)
   }).onReply(function(reply)
@@ -112,7 +112,7 @@ Handlers.add('get-token-configs',
 Handlers.add('update-token-weights',
   Handlers.utils.hasMatchingTag('Action', 'Update-Token-Weights'),
   function(msg)
-    assert(TrustedCron == msg.From, 'Request is not from the trusted Process!')
+    assert(TRUSTED_CRON == msg.From, 'Request is not from the trusted Process!')
 
     updateTokenWeights()
 
@@ -145,7 +145,7 @@ Handlers.add('register-token',
         if tag.name == 'Name' then
           tokenName = tag.value
         end
-        if tag.value == NABProcess then
+        if tag.value == NAB_PROCESS then
           hasNABProcess = true
         end
       end
