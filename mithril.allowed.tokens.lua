@@ -1,6 +1,7 @@
 local json = require('json')
-local NABProcess = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
-local TrustedCron = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+local NAB_PROCESS = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
+local STAKE_MINT_PROCESS = 'KbUW8wkZmiEWeUG0-K8ohSO82TfTUdz6Lqu5nxDoQDc'
+local TRUSTED_CRON = 'pn2IDtbofqxWXyj9W6eXtdp4C7JZ1oJaM81l12ygqYc'
 
 -- Define the token configurations
 -- caution - allowedtokens should be append only
