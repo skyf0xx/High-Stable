@@ -57,7 +57,7 @@ TokenWeights = TokenWeights or {
 
 -- Helper function to update token weights based on NAB balances
 local function updateTokenWeights()
-  local maxLPWeight = 1000
+  local maxLPWeight = 200
 
   -- Only get balances for LP tokens
   Send({
