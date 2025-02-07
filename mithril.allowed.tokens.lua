@@ -81,7 +81,7 @@ local function updateTokenWeights()
         local balanceNum = tonumber(balance)
         if balanceNum > 0 then
           -- Calculate proportional weight: (balance/totalBalance) * maxLPWeight
-          local weight = math.floor((balanceNum / totalBalance) * maxLPWeight)
+          local weight = math.max(minLPWeight, math.floor((balanceNum / totalBalance) * maxLPWeight))
           TokenWeights[tokenAddress] = tostring(weight)
         end
       end
