@@ -151,8 +151,8 @@ Handlers.add('register-token',
       end
 
       -- Validate the response
-      assert(tokenName, 'Token info missing required Name tag')
-      assert(hasNABProcess, 'Token must reference NAB process in tags')
+      assert(type(tokenName) == 'string' and tokenName ~= '', 'Token info missing required Name tag')
+      assert(hasNABProcess, 'Token must have NAB as one of its paired tokens')
 
       -- Register the new token
       AllowedTokens[tokenAddress] = tokenAddress
