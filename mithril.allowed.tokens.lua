@@ -130,6 +130,13 @@ Handlers.add('register-token',
     -- Input validation
     local tokenAddress = msg.Tags['Token-Address']
     assert(type(tokenAddress) == 'string', 'Token address is required!')
+    if (AllowedTokens[tokenAddress]) then
+      msg.reply({
+        Action = 'Register-Token-Result',
+        Success = true,
+      })
+      return
+    end
     assert(not AllowedTokens[tokenAddress], 'Token is already registered!')
 
     -- Get token information from the token's process
