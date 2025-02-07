@@ -137,16 +137,15 @@ Handlers.add('register-token',
       Target = tokenAddress,
       Action = 'Info'
     }).onReply(function(reply)
-      -- Extract name from tags
-      local tokenName
-      local hasNABProcess = false
+      -- Extract name directly
+      local tokenName = reply.Tags['Name']
 
-      for _, tag in pairs(reply.Tags) do
-        if tag.name == 'Name' then
-          tokenName = tag.value
-        end
-        if tag.value == NAB_PROCESS then
+      -- Check for NAB process in any tag value
+      local hasNABProcess = false
+      for _, value in pairs(reply.Tags) do
+        if value == NAB_PROCESS then
           hasNABProcess = true
+          break
         end
       end
 
