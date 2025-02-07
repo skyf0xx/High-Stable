@@ -167,16 +167,6 @@ Handlers.add('register-token',
       table.insert(LPTokens, tokenAddress)
 
       updateTokenWeights()
-
-      msg.reply({
-        Action = 'Register-Token-Result',
-        Success = true,
-        Data = json.encode({
-          address = tokenAddress,
-          name = tokenName,
-          weight = '0'
-        })
-      })
     end)
   end
 )
