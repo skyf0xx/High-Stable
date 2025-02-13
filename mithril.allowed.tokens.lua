@@ -255,6 +255,7 @@ Handlers.add('register-token',
     }).onReply(function(reply)
       -- Extract name directly
       local tokenName = reply.Tags['Name']
+      local denomination = reply.Tags['Denomination']
 
       -- Check for NAB process in any tag value
       local hasNABProcess = false
@@ -268,14 +269,38 @@ Handlers.add('register-token',
       -- Validate the response
       assert(type(tokenName) == 'string' and tokenName ~= '', 'Token info missing required Name tag')
       assert(hasNABProcess, 'Token must have NAB as one of its paired tokens')
+      assert(type(denomination) == 'string' and denomination ~= '', 'Token info missing required Denomination tag')
 
       -- Register the new token
       AllowedTokens[tokenAddress] = tokenAddress
       AllowedTokensNames[tokenAddress] = tokenName
       TokenWeights[tokenAddress] = '0'
       table.insert(LPTokens, tokenAddress)
+      AllowedLPTokensDenomination[tokenAddress] = denomination
 
-      updateTokenWeights()
+      -- Get and store the total supply
+      Send({
+        Target = tokenAddress,
+        Action = 'Total-Supply'
+      }).onReply(function(supplyReply)
+        if supplyReply.Data then
+          AllowedLPTokensTotalSupply[tokenAddress] = cleanSupplyString(supplyReply.Data)
+        end
+
+        -- Update token weights after all data is collected
+        updateTokenWeights()
+
+        msg.reply({
+          Action = 'Register-Token-Result',
+          Success = true,
+          Data = json.encode({
+            address = tokenAddress,
+            name = tokenName,
+            denomination = denomination,
+            totalSupply = AllowedLPTokensTotalSupply[tokenAddress]
+          })
+        })
+      end)
     end)
   end
 )
