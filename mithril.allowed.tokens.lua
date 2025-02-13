@@ -60,6 +60,16 @@ TokenWeights = TokenWeights or {
 AllowedLPTokensDenomination = AllowedLPTokensDenomination or {}
 AllowedLPTokensTotalSupply = AllowedLPTokensTotalSupply or {}
 
+AllowedTokensMultiplier = {
+  -- Double weight for NAB AO/ AR pairs where there are whales (Or favored partners)
+  ['zYzUzy0ooaHj4eeFkBa3WdQE2CR7-nJ3WQteUnm6wMA'] = 10, --NAB / AO Botega
+  ['9eM72ObMJM6o3WHi6nTldwhHsCXSKgzz1hv-FpURZB4'] = 10, --WAR/ NAB Botega
+  ['NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg'] = 10, --QAR/ NAB Botega
+  ['VRJW7p3SOJ927_mbuRzkYizYZxNLug6BOACxgXvvjFQ'] = 10, --NAB/ AO Permaswap
+  ['BGBUvr5dVJrgmmuPN6G56OIuNSHUWO2y7bZyPlAjK8Q'] = 10, --WAR/ NAB Permaswap
+  ['230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M'] = 10, --QAR/ NAB Permaswap
+}
+
 -- Handler to update LP token denominations
 Handlers.add('update-lp-denominations',
   Handlers.utils.hasMatchingTag('Action', 'Update-LP-Denominations'),
@@ -136,7 +146,6 @@ local function updateTokenWeights()
   local maxLPWeight = 7500
   local minLPWeight = 50
 
-  -- Only get balances for LP tokens
   Send({
     Target = NAB_PROCESS,
     Action = 'Balances-From-Many',
@@ -174,7 +183,14 @@ local function updateTokenWeights()
     if totalAdjustedBalance > 0 then
       for tokenAddress, adjustedBalance in pairs(adjustedBalances) do
         local weight = math.floor((adjustedBalance / totalAdjustedBalance) * maxLPWeight)
-        TokenWeights[tokenAddress] = tostring(math.max(minLPWeight, weight))
+        weight = math.max(minLPWeight, weight)
+
+        -- Apply multiplier after minLPWeight check if one exists for this token
+        if AllowedTokensMultiplier[tokenAddress] then
+          weight = math.floor(weight * AllowedTokensMultiplier[tokenAddress])
+        end
+
+        TokenWeights[tokenAddress] = tostring(weight)
       end
 
       Send({
