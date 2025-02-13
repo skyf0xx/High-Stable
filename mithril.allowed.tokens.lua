@@ -1,4 +1,5 @@
 local json = require('json')
+local bint = require('.bint')(256)
 local NAB_PROCESS = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 local STAKE_MINT_PROCESS = 'KbUW8wkZmiEWeUG0-K8ohSO82TfTUdz6Lqu5nxDoQDc'
 local TRUSTED_CRON = 'pn2IDtbofqxWXyj9W6eXtdp4C7JZ1oJaM81l12ygqYc'
@@ -55,7 +56,82 @@ TokenWeights = TokenWeights or {
   ['SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'] = '30'
 }
 
--- Helper function to update token weights based on NAB balances
+-- New state variables for LP token information
+AllowedLPTokensDenomination = AllowedLPTokensDenomination or {}
+AllowedLPTokensTotalSupply = AllowedLPTokensTotalSupply or {}
+
+-- Handler to update LP token denominations
+Handlers.add('update-lp-denominations',
+  Handlers.utils.hasMatchingTag('Action', 'Update-LP-Denominations'),
+  function(msg)
+    assert(TRUSTED_CRON == msg.From or ao.id == msg.From, 'Request is not from the trusted Process!')
+
+    local function updateDenomination(tokenAddress)
+      Send({
+        Target = tokenAddress,
+        Action = 'Info'
+      }).onReply(function(reply)
+        if reply.Tags.Denomination then
+          AllowedLPTokensDenomination[tokenAddress] = reply.Tags.Denomination
+        end
+      end)
+    end
+
+    -- Update denomination for each LP token
+    for _, tokenAddress in ipairs(LPTokens) do
+      updateDenomination(tokenAddress)
+    end
+
+    msg.reply({
+      Action = 'LP-Denominations-Updated',
+      Data = 'Updated LP token denominations'
+    })
+  end
+)
+
+local function cleanSupplyString(supply)
+  if type(supply) ~= 'string' then
+    return '0'
+  end
+
+  -- First remove all quotes and whitespace
+  local cleaned = string.gsub(supply, '["\' ]', '')
+
+  -- Then let bint handle the numeric conversion
+  local success, result = pcall(function() return tostring(bint(cleaned)) end)
+  return success and result or '0'
+end
+
+-- Handler to update LP token total supplies
+Handlers.add('update-lp-supplies',
+  Handlers.utils.hasMatchingTag('Action', 'Update-LP-Supplies'),
+  function(msg)
+    assert(TRUSTED_CRON == msg.From or ao.id == msg.From, 'Request is not from the trusted Process!')
+
+    local function updateSupply(tokenAddress)
+      Send({
+        Target = tokenAddress,
+        Action = 'Total-Supply'
+      }).onReply(function(reply)
+        if reply.Data then
+          AllowedLPTokensTotalSupply[tokenAddress] = cleanSupplyString(reply.Data)
+        end
+      end)
+    end
+
+    -- Update total supply for each LP token
+    for _, tokenAddress in ipairs(LPTokens) do
+      updateSupply(tokenAddress)
+    end
+
+    msg.reply({
+      Action = 'LP-Supplies-Updated',
+      Data = 'Updated LP token total supplies'
+    })
+  end
+)
+
+
 local function updateTokenWeights()
   local maxLPWeight = 7500
   local minLPWeight = 50
@@ -68,24 +144,39 @@ local function updateTokenWeights()
   }).onReply(function(reply)
     local balances = json.decode(reply.Data)
 
+    -- Reset weights
     for _, tokenAddress in ipairs(LPTokens) do
       TokenWeights[tokenAddress] = '0'
     end
 
-    local totalBalance = 0
-    for _, balance in pairs(balances) do
-      totalBalance = totalBalance + tonumber(balance)
-    end
+    -- Calculate adjusted balances using supply and denomination
+    local adjustedBalances = {}
+    local totalAdjustedBalance = 0
 
-    if totalBalance > 0 then
-      for tokenAddress, balance in pairs(balances) do
-        local balanceNum = tonumber(balance)
-        if balanceNum > 0 then
-          -- Calculate proportional weight: (balance/totalBalance) * maxLPWeight
-          local weight = math.max(minLPWeight, math.floor((balanceNum / totalBalance) * maxLPWeight))
-          TokenWeights[tokenAddress] = tostring(weight)
+    for tokenAddress, balance in pairs(balances) do
+      local denomination = tonumber(AllowedLPTokensDenomination[tokenAddress])
+      local totalSupply = AllowedLPTokensTotalSupply[tokenAddress]
+
+      if denomination and totalSupply then
+        local nabBalance = tonumber(balance)
+        local denominatedSupply = tonumber(totalSupply) / (10 ^ denomination)
+
+        if denominatedSupply > 0 and nabBalance > 0 then
+          -- Calculate adjusted balance: (NAB balance)^2 / total supply
+          local adjustedBalance = (nabBalance * nabBalance) / denominatedSupply
+          adjustedBalances[tokenAddress] = adjustedBalance
+          totalAdjustedBalance = totalAdjustedBalance + adjustedBalance
         end
       end
+    end
+
+    -- Calculate weights if we have any adjusted balances
+    if totalAdjustedBalance > 0 then
+      for tokenAddress, adjustedBalance in pairs(adjustedBalances) do
+        local weight = math.floor((adjustedBalance / totalAdjustedBalance) * maxLPWeight)
+        TokenWeights[tokenAddress] = tostring(math.max(minLPWeight, weight))
+      end
+
       Send({
         Target = STAKE_MINT_PROCESS,
         Action = 'Refresh-Token-Configs'
@@ -93,6 +184,7 @@ local function updateTokenWeights()
     end
   end)
 end
+
 
 -- Handler to get all token configurations
 Handlers.add('get-token-configs',
