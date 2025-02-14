@@ -1,6 +1,5 @@
 Variant = '0.0.1'
 local bint = require('.bint')(256)
-local tableUtils = require('.utils')
 local json = require('json')
 
 local function countTableElements(t)
@@ -14,10 +13,11 @@ end
 -- Constants
 CRON_CALLER = 'h7nm30_3nDfMrN5TRdEC80ZIUzQl-fIWWxobwews4WE'
 TOKEN_OWNER = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
-TOTAL_SUPPLY = 21000000 * 10 ^ 8  -- 21M tokens with 8 decimal places
-EMISSION_RATE_PER_MONTH = 0.01425 -- 1.425% monthly rate
-PERIODS_PER_MONTH = 8760          -- number of 5-minute periods in a month (43800/5)
-PRECISION_FACTOR = bint(10 ^ 16)  -- calculating emissions
+TOTAL_SUPPLY = 21000000 * 10 ^ 8                                     -- 21M tokens with 8 decimal places
+EMISSION_RATE_PER_MONTH = 0.01425                                    -- 1.425% monthly rate
+PERIODS_PER_MONTH = 8760                                             -- number of 5-minute periods in a month (43800/5)
+PRECISION_FACTOR = bint(10 ^ 16)                                     -- calculating emissions
+TOKEN_CONFIG_PROCESS = 'G3biaSUvclo3cd_1ErpPYt-VoSSazWrKcuBlzeLkTnU' -- token config process
 
 local PRE_MINT = 5050
 
@@ -25,48 +25,10 @@ local PRE_MINT = 5050
 CurrentSupply = CurrentSupply or PRE_MINT
 LastMintTimestamp = LastMintTimestamp or 0
 
--- caution - allowedtokens should be append only
-local allowedTokens = {
-  agent_qar_lp = 'lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM',
-  qar = 'NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8',
-  war = 'xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10',
-  frp = '4Aq_6sBUyEo6AlKRq6JLT9dDfYG5ThfznA_cXjwsJpM',
-  qar_nab_lp = 'NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg',
-  war_nab_lp = '9eM72ObMJM6o3WHi6nTldwhHsCXSKgzz1hv-FpURZB4',
-  wusdc_nab_lp = 'bxpz3u2USXv8Ictxb0aso3l8V9UTimaiGp9henzDsl8',
-  nab_war_ps_lp = 'BGBUvr5dVJrgmmuPN6G56OIuNSHUWO2y7bZyPlAjK8Q',
-  qar_nab_ps_lp = '230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M',
-  mint = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0',
-}
-
-
-local allowedTokensNames = {
-  agent_qar_lp = 'Botega LP qAR/AGENT',
-  qar = 'qAR',
-  war = 'wAR',
-  frp = 'Fren Points',
-  qar_nab_lp = 'Botega LP qAR/NAB',
-  war_nab_lp = 'Botega LP wAR/NAB',
-  wusdc_nab_lp = 'Botega LP wUSDC/NAB',
-  nab_war_ps_lp = 'Permaswap LP NAB/wAR',
-  qar_nab_ps_lp = 'Permaswap LP qAR/NAB',
-  mint = 'MINT'
-
-}
-
--- weight forumula for lp: 2*(1/ total lp tokens per 1AR)
-local tokenWeights = {
-  agent_qar_lp = '0', --discontinued
-  qar = '2600',
-  war = '2600',
-  frp = '0', --discontinued
-  qar_nab_lp = '36000',
-  war_nab_lp = '36000',
-  wusdc_nab_lp = '10000',
-  nab_war_ps_lp = '180',
-  qar_nab_ps_lp = '36000',
-  mint = '260'
-}
+-- Token configuration state
+AllowedTokens = AllowedTokens or {}
+AllowedTokensNames = AllowedTokensNames or {}
+TokenWeights = TokenWeights or {}
 
 
 --[[
@@ -75,8 +37,8 @@ local tokenWeights = {
 ---@return table<string, table>
 function UpdateAllowedTokens()
   local stakers = Stakers
-  for _, token in pairs(allowedTokens) do
-    if not stakers[token] then stakers[token] = {} end
+  for address, _ in pairs(AllowedTokens) do
+    if not stakers[address] then stakers[address] = {} end
   end
   return stakers
 end
@@ -109,34 +71,18 @@ local utils = {
   end
 }
 
-
---[[
-     Get the name of the token
-   ]]
---
----@param address string
----@return string
-function TokenName(address)
-  for token, addr in pairs(allowedTokens) do
-    if addr == address then
-      return token
-    end
-  end
-
-  return ''
-end
-
 --[[
      Handler to update allowed tokens.
-     Update allowedTokens arrays then call this handler
+     Update AllowedTokens arrays then call this handler
    ]]
 --
 Handlers.add('update-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Update-Allowed-Tokens'),
   function(msg)
+    assert(msg.From == ao.id, 'Caller is not authorized!')
     Stakers = UpdateAllowedTokens()
     Send({
       Target = msg.From,
-      Data = 'Allowed tokens: ' .. json.encode(allowedTokens)
+      Data = 'Allowed tokens: ' .. json.encode(AllowedTokens)
     })
   end)
 
@@ -150,9 +96,9 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     -- credit notice is sent by the token process to the staking contract
     local token = msg.From
     local quantity = msg.Quantity
-    local stakeable = tableUtils.includes(token, tableUtils.values(allowedTokens))
+    local stakeable = AllowedTokens[token] ~= nil
     local sender = msg.Sender
-    local tokenName = TokenName(token)
+    local tokenName = AllowedTokensNames[token]
 
     --don't bother to refund unstakeable tokens - to prevent being drained through spurious fees
     assert(stakeable, 'Token: ' .. token .. ' is not stakable and was ignored!')
@@ -181,9 +127,9 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
   function(msg)
     local from = msg.From
     local token = msg.Tags['Token']
-    local stakeable = tableUtils.includes(token, tableUtils.values(allowedTokens))
+    local stakeable = AllowedTokens[token] ~= nil
     local quantity = Stakers[token][from] or '0'
-    local tokenName = TokenName(token)
+    local tokenName = AllowedTokensNames[token]
 
     assert(stakeable, 'Token: ' .. token .. ' is not stakable and was ignored!')
     assert(bint(0) < bint(quantity), 'You need to have more than zero staked tokens!')
@@ -221,20 +167,19 @@ Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get
     -- Initialize result array to store balances
     local balances = {}
 
-    -- Loop through allowedTokensNames to maintain consistent order
-    for token, name in pairs(allowedTokensNames) do
-      local tokenAddress = allowedTokens[token]
+    -- Loop through AllowedTokens to maintain consistent order
+    for address, _ in pairs(AllowedTokens) do
       local amount = '0' -- Default to '0' for unstaked tokens
 
       -- If there's a staked balance for this token, use it
-      if Stakers[tokenAddress] and Stakers[tokenAddress][staker] then
-        amount = Stakers[tokenAddress][staker]
+      if Stakers[address] and Stakers[address][staker] then
+        amount = Stakers[address][staker]
       end
 
-      -- Add entry to balances array with token address included
+      -- Add entry to balances array
       table.insert(balances, {
-        name = name,
-        address = tokenAddress,
+        name = AllowedTokensNames[address],
+        address = address,
         amount = amount
       })
     end
@@ -245,7 +190,7 @@ Handlers.add('get-staked-balances', Handlers.utils.hasMatchingTag('Action', 'Get
       Action = 'Staked-Balances',
       Staker = staker,
       Data = json.encode(balances),
-      Weights = json.encode(tokenWeights)
+      Weights = json.encode(TokenWeights)
     })
   end)
 
@@ -259,7 +204,7 @@ Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-
     Send({
       Target = msg.From,
       Action = 'Allowed-Tokens',
-      Data = json.encode({ allowedTokens, allowedTokensNames })
+      Data = json.encode({ AllowedTokens, AllowedTokensNames })
     })
   end)
 
@@ -308,9 +253,8 @@ local function calculateStakerAllocations(totalEmission)
 
   -- First pass: calculate total weighted stake
   for token, stakersMap in pairs(Stakers) do
-    local tokenName = TokenName(token)
-    if tokenName and tokenWeights[tokenName] then
-      local tokenWeight = bint(tokenWeights[tokenName])
+    if TokenWeights[token] then
+      local tokenWeight = bint(TokenWeights[token])
       for _, amount in pairs(stakersMap) do
         totalStakeWeight = totalStakeWeight + (bint(amount) * tokenWeight)
       end
@@ -328,9 +272,8 @@ local function calculateStakerAllocations(totalEmission)
 
   -- Second pass: calculate individual allocations with higher precision
   for token, stakersMap in pairs(Stakers) do
-    local tokenName = TokenName(token)
-    if tokenName and tokenWeights[tokenName] then
-      local tokenWeight = bint(tokenWeights[tokenName])
+    if TokenWeights[token] then
+      local tokenWeight = bint(TokenWeights[token])
       for staker, amount in pairs(stakersMap) do
         local stakerWeight = bint(amount) * tokenWeight
 
@@ -366,9 +309,8 @@ local function calculateStakerAllocations(totalEmission)
     local highestStake = bint.zero()
 
     for token, stakersMap in pairs(Stakers) do
-      local tokenName = TokenName(token)
-      if tokenName and tokenWeights[tokenName] then
-        local tokenWeight = bint(tokenWeights[tokenName])
+      if TokenWeights[token] then
+        local tokenWeight = bint(TokenWeights[token])
         for staker, amount in pairs(stakersMap) do
           local stakerWeight = bint(amount) * tokenWeight
           if stakerWeight > highestStake then
@@ -460,12 +402,9 @@ Handlers.add('get-stake-ownership', Handlers.utils.hasMatchingTag('Action', 'Get
     local stakerWeight = bint.zero()
 
     -- Calculate total weighted stake across all tokens
-    for tokenAddress, stakersMap in pairs(Stakers) do
-      -- Get token name for weight lookup
-      local tokenName = TokenName(tokenAddress)
-      -- Ensure we have a valid token weight
-      if tokenName and tokenWeights[tokenName] then
-        local tokenWeight = bint(tokenWeights[tokenName])
+    for token, stakersMap in pairs(Stakers) do
+      if TokenWeights[token] then
+        local tokenWeight = bint(TokenWeights[token])
 
         -- Calculate weights for all stakers
         for addr, amount in pairs(stakersMap) do
@@ -590,7 +529,7 @@ Handlers.add('get-token-stakes',
 
       table.insert(tokenStats, {
         address = token,
-        name = allowedTokensNames[TokenName(token)],
+        name = AllowedTokensNames[token],
         total_staked = totalStaked,
         num_stakers = countTableElements(stakersMap)
       })
@@ -600,5 +539,32 @@ Handlers.add('get-token-stakes',
       Action = 'Token-Stakes',
       Data = json.encode(tokenStats)
     })
+  end
+)
+
+
+-- Refresh token configs (called by cron)
+Handlers.add('refresh-token-configs',
+  Handlers.utils.hasMatchingTag('Action', 'Refresh-Token-Configs'),
+  function(msg)
+    assert(msg.From == ao.id or msg.From == TOKEN_CONFIG_PROCESS, 'Caller is not authorized!')
+
+    Send({
+      Target = TOKEN_CONFIG_PROCESS,
+      Action = 'Get-Token-Configs'
+    }).onReply(function(reply)
+      local configs = json.decode(reply.Data)
+      AllowedTokens = configs.allowedTokens
+      AllowedTokensNames = configs.allowedTokensNames
+      TokenWeights = configs.tokenWeights
+
+      -- Initialize staker entries for any new tokens
+      Stakers = UpdateAllowedTokens()
+
+      msg.reply({
+        Action = 'Token-Configs-Refreshed',
+        Data = 'Token configurations have been refreshed and new tokens initialized'
+      })
+    end)
   end
 )

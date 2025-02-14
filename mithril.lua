@@ -370,3 +370,39 @@ Handlers.add('rebase', Handlers.utils.hasMatchingTag('Action', 'Rebase'),
         Colors.blue .. msg.NewSupply .. Colors.reset
     })
   end)
+
+
+--[[
+     Balances From Many
+   ]]
+--
+Handlers.add('balances-from-many', Handlers.utils.hasMatchingTag('Action', 'Balances-From-Many'),
+  function(msg)
+    -- Parse the JSON array of addresses from the Data field
+    local addresses = json.decode(msg.Data)
+    assert(type(addresses) == 'table', 'Data must be a JSON array of addresses')
+
+    local results = {}
+
+    -- Get balance for each address
+    for _, address in ipairs(addresses) do
+      assert(type(address) == 'string', 'Each address must be a string')
+
+      local bal = '0'
+      if Balances[address] then
+        bal = Balances[address]
+      end
+
+      -- Convert from gons to MTH balance
+      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), GonsPerToken))
+
+      -- Store the result
+      results[address] = MTHBalance
+    end
+
+    msg.reply({
+      Action = 'Balances-From-Many',
+      Data = json.encode(results),
+      Ticker = Ticker
+    })
+  end)
