@@ -4,7 +4,7 @@ local function isCron(msg)
   return msg.Action == 'Cron' and (msg.From == ao.env.Process.Owner or msg.From == ao.id)
 end
 
-Handlers.add('request-token-mints', Handlers.utils.hasMatchingTag('Action', 'Cron'),
+Handlers.add('update-token-weights', Handlers.utils.hasMatchingTag('Action', 'Cron'),
   function(msg)
     assert(isCron(msg), 'message is not from a trusted process')
 
