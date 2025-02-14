@@ -3,6 +3,7 @@ local bint = require('.bint')(256)
 local NAB_PROCESS = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 local STAKE_MINT_PROCESS = 'KbUW8wkZmiEWeUG0-K8ohSO82TfTUdz6Lqu5nxDoQDc'
 local TRUSTED_CRON = 'pn2IDtbofqxWXyj9W6eXtdp4C7JZ1oJaM81l12ygqYc'
+local TRUSTED_SECONDARY_CRON = 'BNGGjJMLRKou_dimjmodfEeEL77CZCdRmT3Rc3yyZss'
 
 -- Define the token configurations
 -- caution - allowedtokens should be append only
@@ -74,7 +75,7 @@ AllowedTokensMultiplier = {
 Handlers.add('update-lp-denominations',
   Handlers.utils.hasMatchingTag('Action', 'Update-LP-Denominations'),
   function(msg)
-    assert(TRUSTED_CRON == msg.From or ao.id == msg.From, 'Request is not from the trusted Process!')
+    assert(TRUSTED_SECONDARY_CRON == msg.From or ao.id == msg.From, 'Request is not from the trusted Process!')
 
     local function updateDenomination(tokenAddress)
       Send({
@@ -116,7 +117,7 @@ end
 Handlers.add('update-lp-supplies',
   Handlers.utils.hasMatchingTag('Action', 'Update-LP-Supplies'),
   function(msg)
-    assert(TRUSTED_CRON == msg.From or ao.id == msg.From, 'Request is not from the trusted Process!')
+    assert(TRUSTED_SECONDARY_CRON == msg.From or ao.id == msg.From, 'Request is not from the trusted Process!')
 
     local function updateSupply(tokenAddress)
       Send({
