@@ -1,0 +1,32 @@
+Other projects stake $NAB to increase the weight of their tokens
+Only way to mint Mithril is by staking $NAB
+Mithril gets bought and burned from $NAB fees?
+
+
+$NAB bought and burned from AO
+Mithril bought and burned from $NAB fees
+Release Mithril very slow, same as $NAB?
+
+
+
+Mithril is stakeable to get NAB
+It's distributed slowly to NAB holders
+
+https://x.com/AlwaysBigger/status/1865278903272763576
+
+
+
+Next - update required files
+
+create new file to collect stats
+
+create cron to call new file
+
+create visual display
+
+check if we had extra qAR tokens
+
+
+
+These guys might be useful for lending or buying when below threshold bot
+https://x.com/FusionFiPro

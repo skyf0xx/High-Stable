@@ -147,3 +147,8 @@ function UpdatePolicy(currentPrice)
     })
   end
 end
+
+--[[
+     TODO: When called, it needs to check and update the CurrentSupply first. (and multiply by denomination)
+   ]]
+--
