@@ -1,6 +1,7 @@
 local json = require('json')
 local bint = require('.bint')(256)
 local NAB_PROCESS = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
+local NAB_DENOMINATION = 8
 local STAKE_MINT_PROCESS = 'KbUW8wkZmiEWeUG0-K8ohSO82TfTUdz6Lqu5nxDoQDc'
 local TRUSTED_CRON = 'pn2IDtbofqxWXyj9W6eXtdp4C7JZ1oJaM81l12ygqYc'
 local TRUSTED_SECONDARY_CRON = 'BNGGjJMLRKou_dimjmodfEeEL77CZCdRmT3Rc3yyZss'
@@ -61,14 +62,24 @@ TokenWeights = TokenWeights or {
 AllowedLPTokensDenomination = AllowedLPTokensDenomination or {}
 AllowedLPTokensTotalSupply = AllowedLPTokensTotalSupply or {}
 
-AllowedTokensMultiplier = {
-  -- Double weight for NAB AO/ AR pairs where there are whales (Or favored partners)
-  ['zYzUzy0ooaHj4eeFkBa3WdQE2CR7-nJ3WQteUnm6wMA'] = 10, --NAB / AO Botega
-  ['9eM72ObMJM6o3WHi6nTldwhHsCXSKgzz1hv-FpURZB4'] = 10, --WAR/ NAB Botega
-  ['NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg'] = 10, --QAR/ NAB Botega
-  ['VRJW7p3SOJ927_mbuRzkYizYZxNLug6BOACxgXvvjFQ'] = 10, --NAB/ AO Permaswap
-  ['BGBUvr5dVJrgmmuPN6G56OIuNSHUWO2y7bZyPlAjK8Q'] = 10, --WAR/ NAB Permaswap
-  ['230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M'] = 10, --QAR/ NAB Permaswap
+-- Constants
+local BENCHMARK_POOL = 'NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg' -- NAB/qAR pool
+local BENCHMARK_WEIGHT = 300
+local MIN_WEIGHT = 50
+
+-- Strategic pool multipliers
+local STRATEGIC_MULTIPLIERS = {
+  -- NAB/AO pairs
+  ['zYzUzy0ooaHj4eeFkBa3WdQE2CR7-nJ3WQteUnm6wMA'] = 2.0, -- NAB/AO Botega
+  ['VRJW7p3SOJ927_mbuRzkYizYZxNLug6BOACxgXvvjFQ'] = 2.0, -- NAB/AO Permaswap
+
+  -- WAR/NAB pairs
+  ['9eM72ObMJM6o3WHi6nTldwhHsCXSKgzz1hv-FpURZB4'] = 1.5, -- WAR/NAB Botega
+  ['BGBUvr5dVJrgmmuPN6G56OIuNSHUWO2y7bZyPlAjK8Q'] = 1.5, -- WAR/NAB Permaswap
+
+  -- QAR/NAB pairs
+  ['NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg'] = 1.5, -- QAR/NAB Botega
+  ['230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M'] = 1.5  -- QAR/NAB Permaswap
 }
 
 -- Handler to update LP token denominations
@@ -143,10 +154,23 @@ Handlers.add('update-lp-supplies',
 )
 
 
-local function updateTokenWeights()
-  local maxLPWeight = 7500
-  local minLPWeight = 50
 
+
+-- Helper function to convert denomination
+local function convertFromDenomination(amount, denomination)
+  return tonumber(amount) / (10 ^ tonumber(denomination))
+end
+
+-- Helper function to calculate NAB to LP ratio
+local function calculateRatio(nabBalance, lpSupply, lpDenomination)
+  local adjustedLPSupply = convertFromDenomination(lpSupply, lpDenomination)
+  local adjustedNABBAlance = convertFromDenomination(nabBalance, NAB_DENOMINATION)
+  if adjustedLPSupply <= 0 then return 0 end
+  return adjustedNABBAlance / adjustedLPSupply
+end
+
+local function updateTokenWeights()
+  -- Get NAB balances for all LP tokens in one go
   Send({
     Target = NAB_PROCESS,
     Action = 'Balances-From-Many',
@@ -154,46 +178,55 @@ local function updateTokenWeights()
   }).onReply(function(reply)
     local balances = json.decode(reply.Data)
 
-    -- Reset weights
-    for _, tokenAddress in ipairs(LPTokens) do
-      TokenWeights[tokenAddress] = '0'
-    end
+    -- First calculate benchmark coefficient
+    local benchmarkCoefficient = nil
+    local benchmarkNABBalance = tonumber(balances[BENCHMARK_POOL])
 
-    -- Calculate adjusted balances using supply and denomination
-    local adjustedBalances = {}
-    local totalAdjustedBalance = 0
+    if benchmarkNABBalance and benchmarkNABBalance > 0 then
+      local lpDenomination = AllowedLPTokensDenomination[BENCHMARK_POOL]
+      local lpSupply = AllowedLPTokensTotalSupply[BENCHMARK_POOL]
 
-    for tokenAddress, balance in pairs(balances) do
-      local denomination = tonumber(AllowedLPTokensDenomination[tokenAddress])
-      local totalSupply = AllowedLPTokensTotalSupply[tokenAddress]
-
-      if denomination and totalSupply then
-        local nabBalance = tonumber(balance)
-        local denominatedSupply = tonumber(totalSupply) / (10 ^ denomination)
-
-        if denominatedSupply > 0 and nabBalance > 0 then
-          -- Calculate adjusted balance: (NAB balance)^2 / total supply
-          local adjustedBalance = (nabBalance * nabBalance) / denominatedSupply
-          adjustedBalances[tokenAddress] = adjustedBalance
-          totalAdjustedBalance = totalAdjustedBalance + adjustedBalance
+      if lpSupply then
+        local benchmarkRatio = calculateRatio(benchmarkNABBalance, lpSupply, lpDenomination)
+        if benchmarkRatio > 0 then
+          benchmarkCoefficient = 1 / benchmarkRatio
         end
       end
     end
 
-    -- Calculate weights if we have any adjusted balances
-    if totalAdjustedBalance > 0 then
-      for tokenAddress, adjustedBalance in pairs(adjustedBalances) do
-        local weight = math.floor((adjustedBalance / totalAdjustedBalance) * maxLPWeight)
-        weight = math.max(minLPWeight, weight)
+    -- Only proceed if we have a valid benchmark
+    if benchmarkCoefficient then
+      -- Calculate weights for each pool
+      for tokenAddress, nabBalance in pairs(balances) do
+        local lpDenomination = AllowedLPTokensDenomination[tokenAddress]
+        local lpSupply = AllowedLPTokensTotalSupply[tokenAddress]
 
-        -- Apply multiplier after minLPWeight check if one exists for this token
-        if AllowedTokensMultiplier[tokenAddress] then
-          weight = math.floor(weight * AllowedTokensMultiplier[tokenAddress])
+        if lpSupply then
+          local nabAmount = tonumber(nabBalance)
+          if nabAmount and nabAmount > 0 then
+            -- Calculate pool's NAB/LP ratio
+            local poolRatio = calculateRatio(nabAmount, lpSupply, lpDenomination)
+
+            -- Calculate base weight using benchmark formula
+            local weight = math.floor(poolRatio * benchmarkCoefficient * BENCHMARK_WEIGHT)
+
+            -- Apply strategic multiplier if exists
+            if STRATEGIC_MULTIPLIERS[tokenAddress] then
+              weight = math.floor(weight * STRATEGIC_MULTIPLIERS[tokenAddress])
+            end
+
+            -- Ensure minimum weight
+            weight = math.max(MIN_WEIGHT, weight)
+
+            -- Update weight in state
+            TokenWeights[tokenAddress] = tostring(weight)
+          else
+            TokenWeights[tokenAddress] = tostring(MIN_WEIGHT)
+          end
         end
-
-        TokenWeights[tokenAddress] = tostring(weight)
       end
 
+      -- Update stake mint process with new weights
       Send({
         Target = STAKE_MINT_PROCESS,
         Action = 'Refresh-Token-Configs'
@@ -201,6 +234,7 @@ local function updateTokenWeights()
     end
   end)
 end
+
 
 
 -- Handler to get all token configurations
