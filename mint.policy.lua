@@ -29,7 +29,7 @@ CurrentSupply = CurrentSupply or StartingSupply
 
 -- Constants
 local TRUSTED_CRON = 'undefined'
-local TOKEN_OWNER = '7LTahNjwiK7h-HSUVDNsfpY--3lYVgjutq7_Gb6YB6I'
+local MINT_TOKEN = '-z95xCXhTkExCX60kqyWGVN3gPGUMmOpgOBC7jkWl24'
 local WEEKLY_BURN_RATE = 0.0025                                         -- 0.25%
 local FINAL_SUPPLY = utils.toBalanceValue(21000000 * 10 ^ Denomination) -- 21M tokens with 8 decimal places
 local PRECISION_FACTOR = bint(10 ^ Denomination)                        -- For percentage calculations
@@ -40,7 +40,7 @@ local PRECISION_FACTOR = bint(10 ^ Denomination)                        -- For p
 ]]
 Handlers.add('update-supply', Handlers.utils.hasMatchingTag('Action', 'Cron'),
   function(msg)
-    assert(TRUSTED_CRON == msg.From, 'Request is not from the trusted Process!')
+    assert(TRUSTED_CRON == msg.From or ao.id == msg.From, 'Request is not from the trusted Process!')
     assert(bint(CurrentSupply) > bint(FINAL_SUPPLY), 'Current supply must be greater than final supply')
 
     -- Calculate new supply with burn rate
@@ -58,7 +58,7 @@ Handlers.add('update-supply', Handlers.utils.hasMatchingTag('Action', 'Cron'),
 
 
     ao.send({
-      Target = TOKEN_OWNER,
+      Target = MINT_TOKEN,
       Action = 'Rebase',
       NewSupply = CurrentSupply
     })
