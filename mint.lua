@@ -1,5 +1,5 @@
 local bint = require('.bint')(256)
-local MonetaryPolicyProcess = '__disabled__' --enabled after Transfer lock period
+local MonetaryPolicyProcess = 'KBOfQGUj-K1GNwfx1CeMSZxxcj5p837d-_6hTmkWF0k'
 
 
 --[[
