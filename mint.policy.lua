@@ -28,8 +28,9 @@ local StartingSupply = utils.toBalanceValue(77000000 * 10 ^ Denomination)
 CurrentSupply = CurrentSupply or StartingSupply
 
 -- Constants
-local TRUSTED_CRON = 'undefined'
-local MINT_TOKEN = '-z95xCXhTkExCX60kqyWGVN3gPGUMmOpgOBC7jkWl24'
+local Denomination = 8
+local TRUSTED_CRON = 'fzBx5uPGi2e_dBbBvwKlh6BbrTLyVJ1YVGlFS1el0uI'
+local MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
 local WEEKLY_BURN_RATE = 0.0025                                         -- 0.25%
 local FINAL_SUPPLY = utils.toBalanceValue(21000000 * 10 ^ Denomination) -- 21M tokens with 8 decimal places
 local PRECISION_FACTOR = bint(10 ^ Denomination)                        -- For percentage calculations
