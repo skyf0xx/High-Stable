@@ -47,8 +47,8 @@ AllowedTokensNames = AllowedTokensNames or {
 
 TokenWeights = TokenWeights or {
   ['lmaw9BhyycEIyxWhr0kF_tTcfoSoduDX8fChpHn2eQM'] = '0',
-  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = '100',
-  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = '100',
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = '300',
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = '300',
   ['4Aq_6sBUyEo6AlKRq6JLT9dDfYG5ThfznA_cXjwsJpM'] = '0',
   ['NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg'] = '0',
   ['9eM72ObMJM6o3WHi6nTldwhHsCXSKgzz1hv-FpURZB4'] = '0',
@@ -66,6 +66,7 @@ AllowedLPTokensTotalSupply = AllowedLPTokensTotalSupply or {}
 local BENCHMARK_POOL = 'NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg' -- NAB/qAR pool
 local BENCHMARK_WEIGHT = 300
 local MIN_WEIGHT = 50
+local MAX_WEIGHT = 5000
 
 -- Strategic pool multipliers
 local STRATEGIC_MULTIPLIERS = {
@@ -215,8 +216,8 @@ local function updateTokenWeights()
               weight = math.floor(weight * STRATEGIC_MULTIPLIERS[tokenAddress])
             end
 
-            -- Ensure minimum weight
-            weight = math.max(MIN_WEIGHT, weight)
+            -- Apply weight bounds
+            weight = math.max(MIN_WEIGHT, math.min(MAX_WEIGHT, weight))
 
             -- Update weight in state
             TokenWeights[tokenAddress] = tostring(weight)
