@@ -18,6 +18,7 @@ EMISSION_RATE_PER_MONTH = 0.01425                                    -- 1.425% m
 PERIODS_PER_MONTH = 8760                                             -- number of 5-minute periods in a month (43800/5)
 PRECISION_FACTOR = bint(10 ^ 16)                                     -- calculating emissions
 TOKEN_CONFIG_PROCESS = 'G3biaSUvclo3cd_1ErpPYt-VoSSazWrKcuBlzeLkTnU' -- token config process
+MINT_TOKEN_PROCESS = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'   -- mint token process
 
 local PRE_MINT = 5050
 
@@ -131,6 +132,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     local quantity = Stakers[token][from] or '0'
     local tokenName = AllowedTokensNames[token]
 
+    assert(token ~= MINT_TOKEN_PROCESS, 'MINT token cannot be unstaked')
     assert(stakeable, 'Token: ' .. token .. ' is not stakable and was ignored!')
     assert(bint(0) < bint(quantity), 'You need to have more than zero staked tokens!')
 
