@@ -268,3 +268,21 @@ Handlers.add('get-all-positions', Handlers.utils.hasMatchingTag('Action', 'Get-A
       Data = json.encode(positions)
     })
   end)
+
+-- Handler to get list of allowed tokens
+Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-Allowed-Tokens'),
+  function(msg)
+    local allowedTokens = {}
+
+    for token, name in pairs(AllowedTokensNames) do
+      table.insert(allowedTokens, {
+        address = token,
+        name = name
+      })
+    end
+
+    msg.reply({
+      Action = 'Allowed-Tokens',
+      Data = json.encode(allowedTokens)
+    })
+  end)
