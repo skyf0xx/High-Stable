@@ -47,6 +47,11 @@ local function isTokenAllowed(token)
   return AllowedTokensNames[token] ~= nil
 end
 
+
+local function operationId(sender)
+  return ao.id .. '-' .. sender .. '-' .. os.time()
+end
+
 -- Handler to stake tokens
 Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
   function(msg)
@@ -57,9 +62,9 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     -- Validate token is allowed
     assert(isTokenAllowed(token), 'Token is not supported for staking')
     assert(bint(quantity) > bint.zero(), 'Stake amount must be greater than 0')
-    --TODO: add msg.Sender to opertion id
+
     -- Create pending operation
-    local operationId = ao.id .. '-' .. os.time()
+    local operationId = operationId(sender)
     PendingOperations[operationId] = {
       type = 'stake',
       token = token,
@@ -148,7 +153,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     assert(bint(StakingPositions[token][sender].amount) > bint.zero(), 'No tokens staked')
 
     local position = StakingPositions[token][sender]
-    local operationId = ao.id .. '-' .. os.time()
+    local operationId = operationId(sender)
 
     -- Create pending operation
     PendingOperations[operationId] = {
