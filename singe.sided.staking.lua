@@ -24,12 +24,7 @@ local utils = {
   end
 }
 
--- State variables
-AllowedTokens = AllowedTokens or {
-  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = true,
-  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = true
-}
-
+-- State variables - simplified to just use AllowedTokensNames
 AllowedTokensNames = AllowedTokensNames or {
   ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'Q Arweave',
   ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'Wrapped AR'
@@ -40,12 +35,17 @@ AllowedTokensNames = AllowedTokensNames or {
 StakingPositions = StakingPositions or {}
 
 -- Initialize staking positions for allowed tokens
-for token, _ in pairs(AllowedTokens) do
+for token, _ in pairs(AllowedTokensNames) do
   StakingPositions[token] = StakingPositions[token] or {}
 end
 
 -- Pending operations tracking
 PendingOperations = PendingOperations or {}
+
+-- Check if a token is allowed
+local function isTokenAllowed(token)
+  return AllowedTokensNames[token] ~= nil
+end
 
 -- Handler to stake tokens
 Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
@@ -55,7 +55,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     local sender = msg.Sender
 
     -- Validate token is allowed
-    assert(AllowedTokens[token], 'Token is not supported for staking')
+    assert(isTokenAllowed(token), 'Token is not supported for staking')
     assert(bint(quantity) > bint.zero(), 'Stake amount must be greater than 0')
     --TODO: add msg.Sender to opertion id
     -- Create pending operation
@@ -104,6 +104,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
       Target = sender,
       Action = 'Stake-Confirmation',
       Token = token,
+      TokenName = AllowedTokensNames[token],
       Amount = quantity,
       ['Operation-Id'] = operationId
     })
@@ -128,6 +129,7 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
         Target = operation.sender,
         Action = 'Stake-Complete',
         Token = operation.token,
+        TokenName = AllowedTokensNames[operation.token],
         Amount = operation.amount,
         ['LP-Tokens'] = msg.Tags['LP-Tokens']
       })
@@ -141,7 +143,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     local sender = msg.From
 
     -- Validate token and staking position
-    assert(AllowedTokens[token], 'Token is not supported for staking')
+    assert(isTokenAllowed(token), 'Token is not supported for staking')
     assert(StakingPositions[token][sender], 'No staking position found')
     assert(bint(StakingPositions[token][sender].amount) > bint.zero(), 'No tokens staked')
 
@@ -178,6 +180,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
       Target = sender,
       Action = 'Unstake-Started',
       Token = token,
+      TokenName = AllowedTokensNames[token],
       Amount = position.amount,
       ['Operation-Id'] = operationId
     })
@@ -215,6 +218,7 @@ Handlers.add('remove-confirmation', Handlers.utils.hasMatchingTag('Action', 'Rem
         Target = operation.sender,
         Action = 'Unstake-Complete',
         Token = operation.token,
+        TokenName = AllowedTokensNames[operation.token],
         Amount = operation.amount,
         Fees = msg.Tags['Fees'] or '0'
       })
@@ -227,7 +231,7 @@ Handlers.add('get-position', Handlers.utils.hasMatchingTag('Action', 'Get-Positi
     local token = msg.Tags['Token']
     local user = msg.Tags['User'] or msg.From
 
-    assert(AllowedTokens[token], 'Token is not supported for staking')
+    assert(isTokenAllowed(token), 'Token is not supported for staking')
 
     local position = StakingPositions[token][user] or {
       amount = '0',
@@ -249,10 +253,10 @@ Handlers.add('get-all-positions', Handlers.utils.hasMatchingTag('Action', 'Get-A
     local user = msg.Tags['User'] or msg.From
     local positions = {}
 
-    for token, _ in pairs(AllowedTokens) do
-      if StakingPositions[token][user] then
+    for token, tokenName in pairs(AllowedTokensNames) do
+      if StakingPositions[token] and StakingPositions[token][user] then
         positions[token] = {
-          name = AllowedTokensNames[token],
+          name = tokenName,
           amount = StakingPositions[token][user].amount,
           lpTokens = StakingPositions[token][user].lpTokens
         }
