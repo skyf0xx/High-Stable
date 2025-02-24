@@ -80,7 +80,11 @@ local STRATEGIC_MULTIPLIERS = {
 
   -- QAR/NAB pairs
   ['NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg'] = 1.5, -- QAR/NAB Botega
-  ['230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M'] = 1.5  -- QAR/NAB Permaswap
+  ['230cSNf7AWy6VsBTftbTXW76xR5H1Ki42nT2xM2fA6M'] = 1.5, -- QAR/NAB Permaswap
+
+  -- NAB/ MINT pairs
+  ['Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI'] = 8, -- QAR/NAB Botega
+  ['2wN5sF25smQorJncgUdg85C3jwBzDTOH-iBxDwvfBvs'] = 15 -- QAR/NAB Permaswap
 }
 
 -- Handler to update LP token denominations
