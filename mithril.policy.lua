@@ -147,3 +147,6 @@ function UpdatePolicy(currentPrice)
     })
   end
 end
+
+-- TODO: smooth out formula with this: https://docs.ampleforth.org/learn/about-the-ampleforth-protocol#additional-protocol-details
+--TODO: Add a handler to get the current supply instead of assuming
