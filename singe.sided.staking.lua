@@ -307,3 +307,33 @@ Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-
       Data = json.encode(allowedTokens)
     })
   end)
+
+-- Handler for AMM liquidity provision errors
+Handlers.add('provide-error', Handlers.utils.hasMatchingTag('Action', 'Provide-Error'),
+  function(msg)
+    local operationId = msg.Tags['X-Operation-Id']
+    local operation = PendingOperations[operationId]
+
+    if operation and operation.type == 'stake' then
+      -- Mark operation as failed
+      operation.status = 'failed'
+
+      -- Return the user's tokens
+      Send({
+        Target = operation.token,
+        Action = 'Transfer',
+        Recipient = operation.sender,
+        Quantity = operation.amount
+      })
+
+      -- Notify user
+      Send({
+        Target = operation.sender,
+        Action = 'Stake-Failed',
+        Token = operation.token,
+        TokenName = AllowedTokensNames[operation.token],
+        Amount = operation.amount,
+        Error = msg.Tags['Result'] or 'Unknown error during liquidity provision'
+      })
+    end
+  end)
