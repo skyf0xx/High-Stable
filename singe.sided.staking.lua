@@ -77,54 +77,54 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
 
     -- First, transfer the user's token to the AMM
     Send({
-      Target = BOTEGA_AMM,
-      Action = 'Credit-Notice',
-      ['X-Action'] = 'Provide',
-      Sender = ao.id,
+      Target = token,
+      Action = 'Transfer',
+      Recipient = BOTEGA_AMM,
       Quantity = quantity,
+      ['X-Action'] = 'Provide',
       ['X-Slippage-Tolerance'] = '1.0',
       ['X-Operation-Id'] = operationId
-    })
-
-    -- Next, request MINT tokens from protocol treasury and transfer to the AMM
-    Send({
-      Target = MINT_TOKEN,
-      Action = 'Transfer',
-      Recipient = ao.id,
-      Quantity = quantity,
-      ['X-Operation-Id'] = operationId
     }).onReply(function()
-      -- After receiving MINT tokens, transfer them to the AMM as the second token
+      -- Next, request MINT tokens from protocol treasury and transfer to the AMM
       Send({
-        Target = BOTEGA_AMM,
-        Action = 'Credit-Notice',
-        ['X-Action'] = 'Provide',
-        Sender = ao.id,
+        Target = MINT_TOKEN,
+        Action = 'Transfer',
+        Recipient = ao.id,
         Quantity = quantity,
-        ['X-Slippage-Tolerance'] = '1.0',
         ['X-Operation-Id'] = operationId
-      })
+      }).onReply(function()
+        -- After receiving MINT tokens, transfer them to the AMM as the second token
+        Send({
+          Target = MINT_TOKEN,
+          Action = 'Credit-Notice',
+          Recipient = BOTEGA_AMM,
+          Quantity = quantity,
+          ['X-Action'] = 'Provide',
+          ['X-Slippage-Tolerance'] = '1.0',
+          ['X-Operation-Id'] = operationId
+        }).onReply(function()
+          -- Initialize or update staking position
+          if not StakingPositions[token][sender] then
+            StakingPositions[token][sender] = {
+              amount = '0',
+              lpTokens = '0'
+            }
+          end
+
+          StakingPositions[token][sender].amount = utils.add(StakingPositions[token][sender].amount, quantity)
+
+          -- Send confirmation to user
+          Send({
+            Target = sender,
+            Action = 'Stake-Confirmation',
+            Token = token,
+            TokenName = AllowedTokensNames[token],
+            Amount = quantity,
+            ['Operation-Id'] = operationId
+          })
+        end)
+      end)
     end)
-
-    -- Initialize or update staking position
-    if not StakingPositions[token][sender] then
-      StakingPositions[token][sender] = {
-        amount = '0',
-        lpTokens = '0'
-      }
-    end
-
-    StakingPositions[token][sender].amount = utils.add(StakingPositions[token][sender].amount, quantity)
-
-    -- Send confirmation to user
-    Send({
-      Target = sender,
-      Action = 'Stake-Confirmation',
-      Token = token,
-      TokenName = AllowedTokensNames[token],
-      Amount = quantity,
-      ['Operation-Id'] = operationId
-    })
   end)
 
 -- Handler for AMM liquidity provision confirmation
