@@ -3,7 +3,7 @@ local json = require('json')
 
 -- Constants
 local MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
-local BOTEGA_AMM = 'VBx1jKKKkr7t4RkJg8axqZY2eNpDZSOxVhcGwF5tWAA'
+local BOTEGA_AMM = 'VBx1jKKKkr7t4RkJg8axqZY2eNpDZSOxVhcGwF5tWAA' --TODO: make dynamic per token
 
 -- Helper functions
 local utils = {
@@ -30,8 +30,6 @@ AllowedTokensNames = AllowedTokensNames or {
   ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'Wrapped AR (wAR)',
   ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Number Always Bigger (NAB)',
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'AO (AO Token)',
-
-
 }
 
 -- Track staking positions
