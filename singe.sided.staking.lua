@@ -77,26 +77,36 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
       status = 'pending'
     }
 
-    -- Request MINT tokens from protocol treasury
+    -- First, transfer the user's token to the AMM
     Send({
-      Target = MINT_TOKEN,
-      Action = 'Transfer',
-      Recipient = BOTEGA_AMM,
+      Target = BOTEGA_AMM,
+      Action = 'Credit-Notice',
+      ['X-Action'] = 'Provide',
+      Sender = ao.id,
       Quantity = quantity,
+      ['X-Slippage-Tolerance'] = '1.0',
       ['X-Operation-Id'] = operationId
     })
 
-    -- Provide liquidity to AMM
+    -- Next, request MINT tokens from protocol treasury and transfer to the AMM
     Send({
-      Target = BOTEGA_AMM,
-      Action = 'Provide',
-      ['Token-A'] = token,
-      ['Token-B'] = MINT_TOKEN,
-      ['Amount-A'] = quantity,
-      ['Amount-B'] = quantity,
-      ['X-Operation-Id'] = operationId,
-      ['X-Slippage-Tolerance'] = '1.0' -- 1% slippage tolerance
-    })
+      Target = MINT_TOKEN,
+      Action = 'Transfer',
+      Recipient = ao.id,
+      Quantity = quantity,
+      ['X-Operation-Id'] = operationId
+    }).onReply(function()
+      -- After receiving MINT tokens, transfer them to the AMM as the second token
+      Send({
+        Target = BOTEGA_AMM,
+        Action = 'Credit-Notice',
+        ['X-Action'] = 'Provide',
+        Sender = ao.id,
+        Quantity = quantity,
+        ['X-Slippage-Tolerance'] = '1.0',
+        ['X-Operation-Id'] = operationId
+      })
+    end)
 
     -- Initialize or update staking position
     if not StakingPositions[token][sender] then
@@ -127,8 +137,10 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
 
     if operation and operation.type == 'stake' then
       -- Update LP token balance
+      -- The AMM sends LP tokens directly to the contract (ao.id)
+      -- We need to update the user's virtual balance
       StakingPositions[operation.token][operation.sender].lpTokens =
-        utils.add(StakingPositions[operation.token][operation.sender].lpTokens, msg.Tags['LP-Tokens'])
+        utils.add(StakingPositions[operation.token][operation.sender].lpTokens, msg.Tags['Received-Pool-Tokens'])
 
       -- Mark operation as completed
       operation.status = 'completed'
@@ -140,7 +152,7 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
         Token = operation.token,
         TokenName = AllowedTokensNames[operation.token],
         Amount = operation.amount,
-        ['LP-Tokens'] = msg.Tags['LP-Tokens']
+        ['LP-Tokens'] = msg.Tags['Received-Pool-Tokens']
       })
     end
   end)
