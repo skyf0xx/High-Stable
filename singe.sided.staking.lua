@@ -50,8 +50,16 @@ local function isTokenAllowed(token)
 end
 
 
-local function operationId(sender)
-  return ao.id .. '-' .. sender .. '-' .. os.time()
+local function operationId(sender, token)
+  return token .. '-' .. sender .. '-' .. os.time()
+end
+
+local function getUsersToken(tokenA, tokenB)
+  if (MINT_TOKEN == tokenA) then
+    return tokenB
+  else
+    return tokenA
+  end
 end
 
 -- Handler to stake tokens
@@ -66,7 +74,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     assert(bint(quantity) > bint.zero(), 'Stake amount must be greater than 0')
 
     -- Create pending operation
-    local operationId = operationId(sender)
+    local operationId = operationId(sender, token)
     PendingOperations[operationId] = {
       type = 'stake',
       token = token,
@@ -187,7 +195,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     assert(bint(StakingPositions[token][sender].amount) > bint.zero(), 'No tokens staked')
 
     local position = StakingPositions[token][sender]
-    local operationId = operationId(sender)
+    local operationId = operationId(sender, token)
 
     -- Create pending operation
     PendingOperations[operationId] = {
