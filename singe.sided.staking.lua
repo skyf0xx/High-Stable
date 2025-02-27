@@ -91,32 +91,42 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
       }
     end
 
-    -- First, transfer the user's token to the AMM
     Send({
-      Target = token,
-      Action = 'Transfer',
-      Recipient = BOTEGA_AMM,
+      Target = BOTEGA_AMM,
+      Action = 'Get-Swap-Output',
+      Token = token,
       Quantity = quantity,
-      ['X-Action'] = 'Provide',
-      ['X-Operation-Id'] = operationId
-    })
-    -- Next, request MINT tokens from protocol treasury and transfer to the AMM
-    Send({
-      Target = MINT_TOKEN,
-      Action = 'Transfer',
-      Recipient = ao.id,
-      Quantity = quantity,
-      ['X-Operation-Id'] = operationId
-    }).onReply(function()
-      -- After receiving MINT tokens, transfer them to the AMM as the second token
+      Swapper = ao.id
+    }).onReply(function(reply)
+      local mintAmount = reply.Tags.Output
+      -- First, transfer the user's token to the AMM
       Send({
-        Target = MINT_TOKEN,
+        Target = token,
         Action = 'Transfer',
-        Recipient = BOTEGA_AMM,
+        Recipient = BOTEGA_AMM, --TODO: make dynamic per token
         Quantity = quantity,
         ['X-Action'] = 'Provide',
         ['X-Operation-Id'] = operationId
       })
+
+      -- Next, request MINT tokens from protocol treasury and transfer to the AMM
+      Send({
+        Target = MINT_TOKEN,
+        Action = 'Transfer',
+        Recipient = ao.id,
+        Quantity = mintAmount,
+        ['X-Operation-Id'] = operationId
+      }).onReply(function()
+        -- After receiving MINT tokens, transfer them to the AMM as the second token
+        Send({
+          Target = MINT_TOKEN,
+          Action = 'Transfer',
+          Recipient = BOTEGA_AMM,
+          Quantity = quantity,
+          ['X-Action'] = 'Provide',
+          ['X-Operation-Id'] = operationId
+        })
+      end)
     end)
   end)
 
@@ -210,7 +220,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     -- Remove liquidity from AMM
     Send({
       Target = BOTEGA_AMM,
-      Action = 'Remove',
+      Action = 'Remove', --TODO: THIS IS NOT CORRECT ACTION
       ['LP-Tokens'] = position.lpTokens,
       ['X-Operation-Id'] = operationId,
     })
