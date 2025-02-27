@@ -75,6 +75,14 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
       status = 'pending'
     }
 
+    -- Initialize or update staking position
+    if not StakingPositions[token][sender] then
+      StakingPositions[token][sender] = {
+        amount = '0',
+        lpTokens = '0'
+      }
+    end
+
     -- First, transfer the user's token to the AMM
     Send({
       Target = token,
