@@ -95,7 +95,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
       -- After receiving MINT tokens, transfer them to the AMM as the second token
       Send({
         Target = MINT_TOKEN,
-        Action = 'Credit-Notice',
+        Action = 'Transfer',
         Recipient = BOTEGA_AMM,
         Quantity = quantity,
         ['X-Action'] = 'Provide',
