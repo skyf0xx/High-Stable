@@ -570,3 +570,16 @@ Handlers.add('refresh-token-configs',
     end)
   end
 )
+
+--claim AO tokens from permaswap
+--TODO: call this one by cron every month
+Handlers.add('claim-permaswap-ao', Handlers.utils.hasMatchingTag('Action', 'Claim-Permaswap-AO'),
+  function(msg)
+    local permaswapProcess = 'LzT6n3Ey6qGLm5TEX25-fB15dlnjBEJe8ti2QyQJt1A'
+
+    Send({
+      Target = permaswapProcess,
+      Action = 'Claim'
+    })
+  end
+)
