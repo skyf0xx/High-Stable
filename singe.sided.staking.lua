@@ -152,6 +152,35 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
     end
   end)
 
+
+Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
+  function(msg)
+    local operationId = msg.Tags['X-Operation-Id']
+    local operation = PendingOperations[operationId]
+    local token = msg.From
+    if (token == MINT_TOKEN) then --refund our treasury
+      Send({
+        Target = token,
+        Action = 'Transfer',
+        Recipient = MINT_TOKEN,
+        Quantity = msg.Quantity
+      })
+      return
+    end
+
+    if (operation ~= nil) then
+      -- Refund the user
+      Send({
+        Target = token,
+        Action = 'Transfer',
+        Recipient = operation.sender,
+        Quantity = msg.Quantity,
+        TokenName = AllowedTokensNames[operation.token],
+      })
+    end
+  end)
+
+
 -- Handler for unstaking
 Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
   function(msg)
