@@ -106,6 +106,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
         Recipient = BOTEGA_AMM, --TODO: make dynamic per token
         Quantity = quantity,
         ['X-Action'] = 'Provide',
+        ['X-Slippage-Tolerance'] = '0.5',
         ['X-Operation-Id'] = operationId
       })
 
@@ -124,6 +125,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
           Recipient = BOTEGA_AMM,
           Quantity = quantity,
           ['X-Action'] = 'Provide',
+          ['X-Slippage-Tolerance'] = '0.5',
           ['X-Operation-Id'] = operationId
         })
       end)
