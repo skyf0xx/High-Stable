@@ -129,13 +129,15 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
   function(msg)
     local operationId = msg.Tags['X-Operation-Id']
     local operation = PendingOperations[operationId]
+    local receivedLP = msg.Tags['Received-Pool-Tokens']
+    local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
 
     if operation and operation.type == 'stake' then
       -- Update LP token balance
       -- The AMM sends LP tokens directly to the contract (ao.id)
       -- We need to update the user's virtual balance
       StakingPositions[operation.token][operation.sender].lpTokens =
-        utils.add(StakingPositions[operation.token][operation.sender].lpTokens, msg.Tags['Received-Pool-Tokens'])
+        utils.add(StakingPositions[operation.token][operation.sender].lpTokens, receivedLP)
 
       -- Mark operation as completed
       operation.status = 'completed'
@@ -147,7 +149,7 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
         Token = operation.token,
         TokenName = AllowedTokensNames[operation.token],
         Amount = operation.amount,
-        ['LP-Tokens'] = msg.Tags['Received-Pool-Tokens']
+        ['LP-Tokens'] = receivedLP
       })
     end
   end)
