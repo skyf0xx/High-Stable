@@ -23,5 +23,6 @@ mint.lua --> "MINT" (SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0)
 mint.policy.lua --> "MINT Policy" (KBOfQGUj-K1GNwfx1CeMSZxxcj5p837d-_6hTmkWF0k)
 
 maintenance.lua --> "Maintenance" (SpkZWLmuKAQ3vIK_1ErUndUxA372HxPtB5ncxa2V9VM)
+airdrop.lua --> "NAB Airdropper" ( WWPYXeDnKggZ1At-AYMaoKmay8e7P2jot_lkL8aZVeE)
 
 Note: if a process doesn't start through its alias, you can just use its address
