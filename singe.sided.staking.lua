@@ -194,6 +194,7 @@ Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-No
 
 
 -- Handler for unstaking
+-- Handler for unstaking
 Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
   function(msg)
     local token = msg.Tags['Token']
@@ -205,10 +206,11 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     assert(bint(StakingPositions[token][sender].amount) > bint.zero(), 'No tokens staked')
 
     local position = StakingPositions[token][sender]
-    local operationId = operationId(sender, token)
+    local opId = operationId(sender, token)
 
     -- Create pending operation
-    PendingOperations[operationId] = {
+    PendingOperations[opId] = {
+      id = opId,
       type = 'unstake',
       token = token,
       sender = sender,
@@ -217,12 +219,12 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
       status = 'pending'
     }
 
-    -- Remove liquidity from AMM
+    -- Remove liquidity from AMM by burning LP tokens
     Send({
       Target = BOTEGA_AMM,
-      Action = 'Remove', --TODO: THIS IS NOT CORRECT ACTION
-      ['LP-Tokens'] = position.lpTokens,
-      ['X-Operation-Id'] = operationId,
+      Action = 'Burn',
+      Quantity = position.lpTokens,
+      ['X-Operation-Id'] = opId,
     })
 
     -- Clear staking position
@@ -238,47 +240,44 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
       Token = token,
       TokenName = AllowedTokensNames[token],
       Amount = position.amount,
-      ['Operation-Id'] = operationId
+      ['Operation-Id'] = opId
     })
   end)
 
--- Handler for AMM remove liquidity confirmation
-Handlers.add('remove-confirmation', Handlers.utils.hasMatchingTag('Action', 'Remove-Confirmation'),
+-- Handler for AMM burn/remove liquidity confirmation
+Handlers.add('burn-confirmation', Handlers.utils.hasMatchingTag('Action', 'Burn-Confirmation'),
   function(msg)
     local operationId = msg.Tags['X-Operation-Id']
     local operation = PendingOperations[operationId]
 
-    if operation and operation.type == 'unstake' then
-      -- Return original token to user
-      Send({
-        Target = operation.token,
-        Action = 'Transfer',
-        Recipient = operation.sender,
-        Quantity = operation.amount
-      })
+    if not operation or operation.type ~= 'unstake' then return end
 
-      -- Handle any accrued fees
-      if msg.Tags['Fees'] then
-        Send({
-          Target = operation.sender,
-          Action = 'Fee-Distribution',
-          Amount = msg.Tags['Fees']
-        })
-      end
+    local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
 
-      -- Mark operation as completed
-      operation.status = 'completed'
+    -- The user should receive their original token back
+    local withdrawnAmount = msg.Tags['Withdrawn-' .. usersToken]
 
-      -- Notify user
-      Send({
-        Target = operation.sender,
-        Action = 'Unstake-Complete',
-        Token = operation.token,
-        TokenName = AllowedTokensNames[operation.token],
-        Amount = operation.amount,
-        Fees = msg.Tags['Fees'] or '0'
-      })
-    end
+    -- Return original token to user
+    Send({
+      Target = operation.token,
+      Action = 'Transfer',
+      Recipient = operation.sender,
+      Quantity = withdrawnAmount
+    })
+
+    -- Mark operation as completed
+    operation.status = 'completed'
+
+    -- Notify user
+    Send({
+      Target = operation.sender,
+      Action = 'Unstake-Complete',
+      Token = operation.token,
+      TokenName = AllowedTokensNames[operation.token],
+      Amount = withdrawnAmount,
+      ['MINT-Amount'] = msg.Tags['Withdrawn-' .. MINT_TOKEN],
+      ['LP-Tokens-Burned'] = msg.Tags['Burned-Pool-Tokens']
+    })
   end)
 
 -- Handler to get staking position
