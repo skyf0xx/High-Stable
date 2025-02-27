@@ -100,27 +100,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
         Quantity = quantity,
         ['X-Action'] = 'Provide',
         ['X-Operation-Id'] = operationId
-      }).onReply(function()
-        -- Initialize or update staking position
-        if not StakingPositions[token][sender] then
-          StakingPositions[token][sender] = {
-            amount = '0',
-            lpTokens = '0'
-          }
-        end
-
-        StakingPositions[token][sender].amount = utils.add(StakingPositions[token][sender].amount, quantity)
-
-        -- Send confirmation to user
-        Send({
-          Target = sender,
-          Action = 'Stake-Confirmation',
-          Token = token,
-          TokenName = AllowedTokensNames[token],
-          Amount = quantity,
-          ['Operation-Id'] = operationId
-        })
-      end)
+      })
     end)
   end)
 
@@ -133,7 +113,11 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
     local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
 
     if operation and operation.type == 'stake' then
-      -- Update LP token balance
+      -- Initialize or update staking position
+      StakingPositions[operation.token][operation.sender].amount = utils.add(
+        StakingPositions[operation.token][operation.sender].amount,
+        msg.Tags['Provided-' .. usersToken])
+
       -- The AMM sends LP tokens directly to the contract (ao.id)
       -- We need to update the user's virtual balance
       StakingPositions[operation.token][operation.sender].lpTokens =
