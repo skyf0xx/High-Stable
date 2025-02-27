@@ -99,21 +99,12 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
       Swapper = ao.id
     }).onReply(function(reply)
       local mintAmount = reply.Tags.Output
-      -- First, transfer the user's token to the AMM
-      Send({
-        Target = token,
-        Action = 'Transfer',
-        Recipient = BOTEGA_AMM, --TODO: make dynamic per token
-        Quantity = quantity,
-        ['X-Action'] = 'Provide',
-        ['X-Slippage-Tolerance'] = '0.5',
-        ['X-Operation-Id'] = operationId
-      })
 
-      -- Next, request MINT tokens from protocol treasury and transfer to the AMM
       -- Apply a small excess (3% more MINT tokens) to ensure all user tokens are used
       local excessMultiplier = '1030' -- 103.0%
       local adjustedMintAmount = utils.divide(utils.multiply(mintAmount, excessMultiplier), '1000')
+
+      -- Request MINT tokens from protocol treasury and transfer to the AMM
       Send({
         Target = MINT_TOKEN,
         Action = 'Transfer',
@@ -127,6 +118,16 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
           Action = 'Transfer',
           Recipient = BOTEGA_AMM,
           Quantity = adjustedMintAmount,
+          ['X-Action'] = 'Provide',
+          ['X-Slippage-Tolerance'] = '0.5',
+          ['X-Operation-Id'] = operationId
+        })
+
+        -- Transfer the user's token to the AMM
+        Send({
+          Target = token,
+          Action = 'Transfer',
+          Recipient = BOTEGA_AMM, --TODO: make dynamic per token
           Quantity = quantity,
           ['X-Action'] = 'Provide',
           ['X-Slippage-Tolerance'] = '0.5',
