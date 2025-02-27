@@ -111,11 +111,14 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
       })
 
       -- Next, request MINT tokens from protocol treasury and transfer to the AMM
+      -- Apply a small excess (3% more MINT tokens) to ensure all user tokens are used
+      local excessMultiplier = '1030' -- 103.0%
+      local adjustedMintAmount = utils.divide(utils.multiply(mintAmount, excessMultiplier), '1000')
       Send({
         Target = MINT_TOKEN,
         Action = 'Transfer',
         Recipient = ao.id,
-        Quantity = mintAmount,
+        Quantity = adjustedMintAmount,
         ['X-Operation-Id'] = operationId
       }).onReply(function()
         -- After receiving MINT tokens, transfer them to the AMM as the second token
@@ -123,6 +126,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
           Target = MINT_TOKEN,
           Action = 'Transfer',
           Recipient = BOTEGA_AMM,
+          Quantity = adjustedMintAmount,
           Quantity = quantity,
           ['X-Action'] = 'Provide',
           ['X-Slippage-Tolerance'] = '0.5',
