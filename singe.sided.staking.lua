@@ -82,47 +82,44 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
       Recipient = BOTEGA_AMM,
       Quantity = quantity,
       ['X-Action'] = 'Provide',
-      ['X-Slippage-Tolerance'] = '1.0',
+      ['X-Operation-Id'] = operationId
+    })
+    -- Next, request MINT tokens from protocol treasury and transfer to the AMM
+    Send({
+      Target = MINT_TOKEN,
+      Action = 'Transfer',
+      Recipient = ao.id,
+      Quantity = quantity,
       ['X-Operation-Id'] = operationId
     }).onReply(function()
-      -- Next, request MINT tokens from protocol treasury and transfer to the AMM
+      -- After receiving MINT tokens, transfer them to the AMM as the second token
       Send({
         Target = MINT_TOKEN,
-        Action = 'Transfer',
-        Recipient = ao.id,
+        Action = 'Credit-Notice',
+        Recipient = BOTEGA_AMM,
         Quantity = quantity,
+        ['X-Action'] = 'Provide',
         ['X-Operation-Id'] = operationId
       }).onReply(function()
-        -- After receiving MINT tokens, transfer them to the AMM as the second token
+        -- Initialize or update staking position
+        if not StakingPositions[token][sender] then
+          StakingPositions[token][sender] = {
+            amount = '0',
+            lpTokens = '0'
+          }
+        end
+
+        StakingPositions[token][sender].amount = utils.add(StakingPositions[token][sender].amount, quantity)
+
+        -- Send confirmation to user
         Send({
-          Target = MINT_TOKEN,
-          Action = 'Credit-Notice',
-          Recipient = BOTEGA_AMM,
-          Quantity = quantity,
-          ['X-Action'] = 'Provide',
-          ['X-Slippage-Tolerance'] = '1.0',
-          ['X-Operation-Id'] = operationId
-        }).onReply(function()
-          -- Initialize or update staking position
-          if not StakingPositions[token][sender] then
-            StakingPositions[token][sender] = {
-              amount = '0',
-              lpTokens = '0'
-            }
-          end
-
-          StakingPositions[token][sender].amount = utils.add(StakingPositions[token][sender].amount, quantity)
-
-          -- Send confirmation to user
-          Send({
-            Target = sender,
-            Action = 'Stake-Confirmation',
-            Token = token,
-            TokenName = AllowedTokensNames[token],
-            Amount = quantity,
-            ['Operation-Id'] = operationId
-          })
-        end)
+          Target = sender,
+          Action = 'Stake-Confirmation',
+          Token = token,
+          TokenName = AllowedTokensNames[token],
+          Amount = quantity,
+          ['Operation-Id'] = operationId
+        })
       end)
     end)
   end)
@@ -185,7 +182,6 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
       Action = 'Remove',
       ['LP-Tokens'] = position.lpTokens,
       ['X-Operation-Id'] = operationId,
-      ['X-Slippage-Tolerance'] = '1.0'
     })
 
     -- Clear staking position
