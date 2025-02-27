@@ -158,9 +158,9 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
 
       --update amount user staked in case they got a refund
       PendingOperations[operationId].amount = msg.Tags['Provided-' .. usersToken]
-
+      PendingOperations[operationId].lpTokens = receivedLP
       -- Mark operation as completed
-      operation.status = 'completed'
+      PendingOperations[operationId].status = 'completed'
 
       -- Notify user
       Send({
