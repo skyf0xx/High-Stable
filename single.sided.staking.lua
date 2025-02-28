@@ -151,6 +151,11 @@ Handlers.add('set-pause-state', Handlers.utils.hasMatchingTag('Action', 'Set-Pau
     local shouldPause = (msg.Tags['Pause'] == 'true')
     IsPaused = shouldPause
 
+    logEvent('PauseStateChanged', {
+      caller = msg.From,
+      isPaused = shouldPause
+    })
+
     msg.reply({
       Action = 'Pause-State-Updated',
       ['Is-Paused'] = tostring(IsPaused)
@@ -210,6 +215,15 @@ Handlers.add('stake', function(msg)
       status = 'pending',
       timestamp = os.time()
     }
+
+    -- Log stake initiated
+    logEvent('StakeInitiated', {
+      sender = sender,
+      token = token,
+      tokenName = AllowedTokensNames[token],
+      amount = quantity,
+      operationId = opId
+    })
 
     -- Initialize or update staking position
     if not StakingPositions[token][sender] then
@@ -298,6 +312,16 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
     -- Mark operation as completed
     PendingOperations[operationId].status = 'completed'
 
+    -- Log the successful stake event
+    logEvent('StakeComplete', {
+      sender = operation.sender,
+      token = operation.token,
+      tokenName = AllowedTokensNames[operation.token],
+      amount = msg.Tags['Provided-' .. usersToken],
+      lpTokens = receivedLP,
+      operationId = operationId
+    })
+
     -- Notify user
     Send({
       Target = operation.sender,
@@ -375,6 +399,16 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     local position = StakingPositions[token][sender]
     local opId = operationId(sender, token, 'unstake')
 
+    -- Log unstake initiated
+    logEvent('UnstakeInitiated', {
+      sender = sender,
+      token = token,
+      tokenName = AllowedTokensNames[token],
+      amount = position.amount,
+      lpTokens = position.lpTokens,
+      operationId = opId
+    })
+
     -- Update state before external calls (checks-effects-interactions pattern)
     -- Store the position values before clearing
     local positionAmount = position.amount
@@ -441,6 +475,17 @@ Handlers.add('burn-confirmation', Handlers.utils.hasMatchingTag('Action', 'Burn-
 
     -- Mark operation as completed first (checks-effects-interactions)
     PendingOperations[operationId].status = 'completed'
+
+    -- Log the successful unstake event
+    logEvent('UnstakeComplete', {
+      sender = operation.sender,
+      token = operation.token,
+      tokenName = AllowedTokensNames[operation.token],
+      withdrawnAmount = withdrawnAmount,
+      mintAmount = msg.Tags['Withdrawn-' .. MINT_TOKEN],
+      lpTokensBurned = msg.Tags['Burned-Pool-Tokens'],
+      operationId = operationId
+    })
 
     -- Return original token to user
     Send({
@@ -548,6 +593,16 @@ Handlers.add('provide-error', Handlers.utils.hasMatchingTag('Action', 'Provide-E
     -- Mark operation as failed first (checks-effects-interactions)
     PendingOperations[operationId].status = 'failed'
 
+    -- Log the failed stake event
+    logEvent('StakeFailed', {
+      sender = operation.sender,
+      token = operation.token,
+      tokenName = AllowedTokensNames[operation.token],
+      amount = operation.amount,
+      error = msg.Tags['Result'] or 'Unknown error during liquidity provision',
+      operationId = operationId
+    })
+
     -- Return the user's tokens
     Send({
       Target = operation.token,
@@ -568,13 +623,32 @@ Handlers.add('provide-error', Handlers.utils.hasMatchingTag('Action', 'Provide-E
   end)
 
 -- Run cleanup periodically (e.g., attach to a frequently called handler)
-Handlers.add('cleanup-stale-operations', Handlers.utils.hasMatchingTag('Action', 'Cleanup'),
+HHandlers.add('cleanup-stale-operations', Handlers.utils.hasMatchingTag('Action', 'Cleanup'),
   function(msg)
     assertIsAuthorized(msg.From)
+
+    local startCount = 0
+    for _ in pairs(PendingOperations) do
+      startCount = startCount + 1
+    end
+
     cleanStaleOperations()
+
+    local endCount = 0
+    for _ in pairs(PendingOperations) do
+      endCount = endCount + 1
+    end
+
+    logEvent('CleanupCompleted', {
+      caller = msg.From,
+      operationsBeforeCleanup = startCount,
+      operationsAfterCleanup = endCount,
+      operationsRemoved = startCount - endCount
+    })
 
     msg.reply({
       Action = 'Cleanup-Complete',
+      ['Operations-Removed'] = tostring(startCount - endCount),
       ['Timestamp'] = tostring(os.time())
     })
   end)
