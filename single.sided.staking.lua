@@ -126,6 +126,23 @@ local function cleanStaleOperations()
   end
 end
 
+-- Operation status checking helper to reduce redundant code
+local function verifyOperation(opId, expectedType, expectedStatus)
+  local operation = PendingOperations[opId]
+  assert(operation, 'Operation not found: ' .. opId)
+  assert(operation.type == expectedType,
+    'Invalid operation type. Expected: ' .. expectedType .. ', got: ' .. operation.type)
+  assert(operation.status == expectedStatus,
+    'Operation in wrong state. Expected: ' .. expectedStatus .. ', got: ' .. operation.status)
+  return operation
+end
+
+-- Event logging function for important operations
+local function logEvent(eventType, details)
+  print(Colors.gray .. '[Event] ' .. eventType .. ': ' .. json.encode(details) .. Colors.reset)
+end
+
+
 -- Admin function to pause/unpause contract
 Handlers.add('set-pause-state', Handlers.utils.hasMatchingTag('Action', 'Set-Pause-State'),
   function(msg)
@@ -254,19 +271,15 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
     assertNotPaused()
 
     local operationId = msg.Tags['X-Operation-Id']
-    local operation = PendingOperations[operationId]
 
-    -- Verify operation exists and is of correct type
-    assert(operation and operation.type == 'stake', 'Invalid or unknown operation')
+    -- Use our new helper function
+    local operation = verifyOperation(operationId, 'stake', 'pending')
 
     -- Verify the message is from the correct AMM or factory
     assertIsValidAmm(msg.From, operation.amm)
 
     local receivedLP = msg.Tags['Received-Pool-Tokens']
     local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
-
-    -- Verify operation is in the correct state
-    assert(operation.status == 'pending', 'Operation is not in pending state')
 
     -- Initialize or update staking position
     StakingPositions[operation.token][operation.sender].amount = utils.add(
@@ -411,16 +424,12 @@ Handlers.add('burn-confirmation', Handlers.utils.hasMatchingTag('Action', 'Burn-
     assertNotPaused()
 
     local operationId = msg.Tags['X-Operation-Id']
-    local operation = PendingOperations[operationId]
 
-    -- Verify operation exists and is of correct type
-    assert(operation and operation.type == 'unstake', 'Invalid or unknown operation')
+    -- Use our new helper function
+    local operation = verifyOperation(operationId, 'unstake', 'pending')
 
     -- Verify the message is from the correct AMM or factory
     assertIsValidAmm(msg.From, operation.amm)
-
-    -- Verify operation is in the correct state
-    assert(operation.status == 'pending', 'Operation is not in pending state')
 
     local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
 
@@ -529,16 +538,12 @@ Handlers.add('provide-error', Handlers.utils.hasMatchingTag('Action', 'Provide-E
     assertNotPaused()
 
     local operationId = msg.Tags['X-Operation-Id']
-    local operation = PendingOperations[operationId]
 
-    -- Verify operation exists and is of correct type
-    assert(operation and operation.type == 'stake', 'Invalid or unknown operation')
+    -- Use our new helper function
+    local operation = verifyOperation(operationId, 'stake', 'pending')
 
     -- Verify the message is from the correct AMM or factory
     assertIsValidAmm(msg.From, operation.amm)
-
-    -- Verify operation is in the correct state
-    assert(operation.status == 'pending', 'Operation is not in pending state')
 
     -- Mark operation as failed first (checks-effects-interactions)
     PendingOperations[operationId].status = 'failed'
