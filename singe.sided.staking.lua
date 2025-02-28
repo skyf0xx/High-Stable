@@ -97,8 +97,8 @@ local function assertIsValidAmm(address, expectedAmm)
 end
 
 -- Generate operation ID
-local function operationId(sender, token)
-  return token .. '-' .. sender .. '-' .. os.time()
+local function operationId(sender, token, type)
+  return token .. '-' .. type .. sender .. '-' .. os.time()
 end
 
 -- Get user's token from a pair
@@ -181,7 +181,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     local amm = getAmmForToken(token)
 
     -- Create pending operation with timestamp
-    local opId = operationId(sender, token)
+    local opId = operationId(sender, token, 'stake')
     PendingOperations[opId] = {
       type = 'stake',
       token = token,
@@ -357,7 +357,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     local amm = getAmmForToken(token)
 
     local position = StakingPositions[token][sender]
-    local opId = operationId(sender, token)
+    local opId = operationId(sender, token, 'unstake')
 
     -- Update state before external calls (checks-effects-interactions pattern)
     -- Store the position values before clearing
