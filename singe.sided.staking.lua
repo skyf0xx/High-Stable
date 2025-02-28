@@ -3,7 +3,23 @@ local json = require('json')
 
 -- Constants
 local MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
-local BOTEGA_AMM = 'VBx1jKKKkr7t4RkJg8axqZY2eNpDZSOxVhcGwF5tWAA' --TODO: make dynamic per token
+
+-- State variables - simplified to just use AllowedTokensNames
+AllowedTokensNames = AllowedTokensNames or {
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'Q Arweave (qAR)',
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'Wrapped AR (wAR)',
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Number Always Bigger (NAB)',
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'AO (AO Token)',
+}
+
+
+-- Token-to-AMM mappings
+TOKEN_AMM_MAPPINGS = TOKEN_AMM_MAPPINGS or {
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'VBx1jKKKkr7t4RkJg8axqZY2eNpDZSOxVhcGwF5tWAA', -- qAR AMM
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'pX0L5GY09W-EL1zcjrGPYVy-B3iu5HWF53S2_GY0ViI', -- wAR AMM
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'AzxYcLUMPJvjz9LPJ-A-6yzwW9ScQYl8TLVL-84y2PE', -- NAB AMM
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'a98-hjIuPJeK89RwZ3jMkoN2iOuQkTkKrMWi4O3DRIY', -- AO AMM
+}
 
 -- Helper functions
 local utils = {
@@ -24,13 +40,6 @@ local utils = {
   end
 }
 
--- State variables - simplified to just use AllowedTokensNames
-AllowedTokensNames = AllowedTokensNames or {
-  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'Q Arweave (qAR)',
-  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'Wrapped AR (wAR)',
-  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Number Always Bigger (NAB)',
-  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'AO (AO Token)',
-}
 
 -- Track staking positions
 -- StakingPositions[token][user] = { amount = "100", lpTokens = "50" }
@@ -44,11 +53,17 @@ end
 -- Pending operations tracking
 PendingOperations = PendingOperations or {}
 
+-- Get the AMM address for a token
+local function getAmmForToken(token)
+  local amm = TOKEN_AMM_MAPPINGS[token]
+  assert(amm, 'No AMM configured for token: ' .. token)
+  return amm
+end
+
 -- Check if a token is allowed
 local function isTokenAllowed(token)
   return AllowedTokensNames[token] ~= nil
 end
-
 
 local function operationId(sender, token)
   return token .. '-' .. sender .. '-' .. os.time()
@@ -73,6 +88,9 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     assert(isTokenAllowed(token), 'Token is not supported for staking')
     assert(bint(quantity) > bint.zero(), 'Stake amount must be greater than 0')
 
+    -- Get the corresponding AMM for this token
+    local amm = getAmmForToken(token)
+
     -- Create pending operation
     local operationId = operationId(sender, token)
     PendingOperations[operationId] = {
@@ -80,6 +98,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
       token = token,
       sender = sender,
       amount = quantity,
+      amm = amm,
       status = 'pending'
     }
 
@@ -92,7 +111,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
     end
 
     Send({
-      Target = BOTEGA_AMM,
+      Target = amm,
       Action = 'Get-Swap-Output',
       Token = token,
       Quantity = quantity,
@@ -116,7 +135,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
         Send({
           Target = MINT_TOKEN,
           Action = 'Transfer',
-          Recipient = BOTEGA_AMM,
+          Recipient = amm,
           Quantity = adjustedMintAmount,
           ['X-Action'] = 'Provide',
           ['X-Slippage-Tolerance'] = '0.5',
@@ -127,7 +146,7 @@ Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
         Send({
           Target = token,
           Action = 'Transfer',
-          Recipient = BOTEGA_AMM, --TODO: make dynamic per token
+          Recipient = amm,
           Quantity = quantity,
           ['X-Action'] = 'Provide',
           ['X-Slippage-Tolerance'] = '0.5',
@@ -146,6 +165,9 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
     local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
 
     if operation and operation.type == 'stake' then
+      -- Verify the message is from the correct AMM
+      assert(msg.From == operation.amm, 'Message not from the expected AMM')
+
       -- Initialize or update staking position
       StakingPositions[operation.token][operation.sender].amount = utils.add(
         StakingPositions[operation.token][operation.sender].amount,
@@ -156,7 +178,7 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
       StakingPositions[operation.token][operation.sender].lpTokens =
         utils.add(StakingPositions[operation.token][operation.sender].lpTokens, receivedLP)
 
-      --update amount user staked in case they got a refund
+      -- Update amount user staked in case they got a refund
       PendingOperations[operationId].amount = msg.Tags['Provided-' .. usersToken]
       PendingOperations[operationId].lpTokens = receivedLP
       -- Mark operation as completed
@@ -174,13 +196,14 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
     end
   end)
 
-
+-- Handler for refunding unused tokens
 Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
   function(msg)
     local operationId = msg.Tags['X-Operation-Id']
     local operation = PendingOperations[operationId]
     local token = msg.From
-    if (token == MINT_TOKEN) then --refund our treasury
+
+    if (token == MINT_TOKEN) then -- refund our treasury
       Send({
         Target = token,
         Action = 'Transfer',
@@ -191,6 +214,10 @@ Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-No
     end
 
     if (operation ~= nil) then
+      -- Verify the message is from a valid source
+      local amm = getAmmForToken(operation.token)
+      assert(msg.From == amm or msg.From == operation.token, 'Refund not from recognized source')
+
       -- Refund the user
       Send({
         Target = token,
@@ -202,8 +229,6 @@ Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-No
     end
   end)
 
-
--- Handler for unstaking
 -- Handler for unstaking
 Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
   function(msg)
@@ -214,6 +239,9 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     assert(isTokenAllowed(token), 'Token is not supported for staking')
     assert(StakingPositions[token][sender], 'No staking position found')
     assert(bint(StakingPositions[token][sender].amount) > bint.zero(), 'No tokens staked')
+
+    -- Get the corresponding AMM for this token
+    local amm = getAmmForToken(token)
 
     local position = StakingPositions[token][sender]
     local opId = operationId(sender, token)
@@ -226,12 +254,13 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
       sender = sender,
       amount = position.amount,
       lpTokens = position.lpTokens,
+      amm = amm,
       status = 'pending'
     }
 
     -- Remove liquidity from AMM by burning LP tokens
     Send({
-      Target = BOTEGA_AMM,
+      Target = amm,
       Action = 'Burn',
       Quantity = position.lpTokens,
       ['X-Operation-Id'] = opId,
@@ -261,6 +290,9 @@ Handlers.add('burn-confirmation', Handlers.utils.hasMatchingTag('Action', 'Burn-
     local operation = PendingOperations[operationId]
 
     if not operation or operation.type ~= 'unstake' then return end
+
+    -- Verify the message is from the correct AMM
+    assert(msg.From == operation.amm, 'Message not from the expected AMM')
 
     local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
 
@@ -298,6 +330,9 @@ Handlers.add('get-position', Handlers.utils.hasMatchingTag('Action', 'Get-Positi
 
     assert(isTokenAllowed(token), 'Token is not supported for staking')
 
+    -- Get the corresponding AMM for this token
+    local amm = getAmmForToken(token)
+
     local position = StakingPositions[token][user] or {
       amount = '0',
       lpTokens = '0'
@@ -308,7 +343,8 @@ Handlers.add('get-position', Handlers.utils.hasMatchingTag('Action', 'Get-Positi
       Token = token,
       ['Token-Name'] = AllowedTokensNames[token],
       Amount = position.amount,
-      ['LP-Tokens'] = position.lpTokens
+      ['LP-Tokens'] = position.lpTokens,
+      ['AMM'] = amm
     })
   end)
 
@@ -317,13 +353,15 @@ Handlers.add('get-all-positions', Handlers.utils.hasMatchingTag('Action', 'Get-A
   function(msg)
     local user = msg.Tags['User'] or msg.From
     local positions = {}
-
+    local amm = ''
     for token, tokenName in pairs(AllowedTokensNames) do
+      amm = getAmmForToken(token)
       if StakingPositions[token] and StakingPositions[token][user] then
         positions[token] = {
           name = tokenName,
           amount = StakingPositions[token][user].amount,
-          lpTokens = StakingPositions[token][user].lpTokens
+          lpTokens = StakingPositions[token][user].lpTokens,
+          amm = amm
         }
       end
     end
@@ -342,7 +380,8 @@ Handlers.add('get-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'Get-
     for token, name in pairs(AllowedTokensNames) do
       table.insert(allowedTokens, {
         address = token,
-        name = name
+        name = name,
+        amm = TOKEN_AMM_MAPPINGS[token]
       })
     end
 
@@ -359,6 +398,9 @@ Handlers.add('provide-error', Handlers.utils.hasMatchingTag('Action', 'Provide-E
     local operation = PendingOperations[operationId]
 
     if operation and operation.type == 'stake' then
+      -- Verify the message is from the correct AMM
+      assert(msg.From == operation.amm, 'Message not from the expected AMM')
+
       -- Mark operation as failed
       operation.status = 'failed'
 
@@ -381,5 +423,3 @@ Handlers.add('provide-error', Handlers.utils.hasMatchingTag('Action', 'Provide-E
       })
     end
   end)
-
---TODO: when hearing from AMM - ALWAYS ASSERT ITS FROM A TRUSTED SOURCE!
