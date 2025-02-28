@@ -93,7 +93,7 @@ end
 -- Assert AMM is valid
 local function assertIsValidAmm(address, expectedAmm)
   assert(address == expectedAmm,
-    'Unauthorized: message not from expected AMM or factory')
+    'Unauthorized: message not from expected AMM. Got: ' .. address .. ', expected: ' .. expectedAmm)
 end
 
 -- Generate operation ID
