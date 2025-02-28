@@ -308,7 +308,7 @@ Handlers.add('burn-confirmation', Handlers.utils.hasMatchingTag('Action', 'Burn-
     })
 
     -- Mark operation as completed
-    operation.status = 'completed'
+    PendingOperations[operationId].status = 'completed'
 
     -- Notify user
     Send({
@@ -402,7 +402,7 @@ Handlers.add('provide-error', Handlers.utils.hasMatchingTag('Action', 'Provide-E
       assert(msg.From == operation.amm, 'Message not from the expected AMM')
 
       -- Mark operation as failed
-      operation.status = 'failed'
+      PendingOperations[operationId].status = 'failed'
 
       -- Return the user's tokens
       Send({
