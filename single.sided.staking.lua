@@ -229,7 +229,8 @@ Handlers.add('stake', function(msg)
     if not StakingPositions[token][sender] then
       StakingPositions[token][sender] = {
         amount = '0',
-        lpTokens = '0'
+        lpTokens = '0',
+        mintAmount = '0'
       }
     end
 
@@ -296,9 +297,16 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
     local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
 
     -- Initialize or update staking position
-    StakingPositions[operation.token][operation.sender].amount = utils.add(
-      StakingPositions[operation.token][operation.sender].amount,
-      msg.Tags['Provided-' .. usersToken])
+    StakingPositions[operation.token][operation.sender] = {
+      amount = utils.add(
+        StakingPositions[operation.token][operation.sender].amount,
+        msg.Tags['Provided-' .. usersToken]),
+      lpTokens = utils.add(
+        StakingPositions[operation.token][operation.sender].lpTokens,
+        receivedLP),
+      mintAmount = msg.Tags['Provided-' .. MINT_TOKEN] -- Track MINT contribution
+    }
+
 
     -- The AMM sends LP tokens directly to the contract (ao.id)
     -- We need to update the user's virtual balance
@@ -417,7 +425,8 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     -- Clear staking position
     StakingPositions[token][sender] = {
       amount = '0',
-      lpTokens = '0'
+      lpTokens = '0',
+      mintAmount = '0'
     }
 
     -- Create pending operation
@@ -452,59 +461,229 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     })
   end)
 
--- Handler for AMM burn/remove liquidity confirmation - security improved
-Handlers.add('burn-confirmation', Handlers.utils.hasMatchingTag('Action', 'Burn-Confirmation'),
-  function(msg)
-    assertNotPaused()
+-- Handler for AMM burn/remove liquidity confirmation with comprehensive fee sharing and IL protection
+-- Helper function to validate burn operation
+local function validateBurnOperation(msg)
+  assertNotPaused()
 
-    local operationId = msg.Tags['X-Operation-Id']
+  local operationId = msg.Tags['X-Operation-Id']
+  local operation = verifyOperation(operationId, 'unstake', 'pending')
+  assertIsValidAmm(msg.From, operation.amm)
 
-    -- Use our new helper function
-    local operation = verifyOperation(operationId, 'unstake', 'pending')
+  return operation
+end
 
-    -- Verify the message is from the correct AMM or factory
-    assertIsValidAmm(msg.From, operation.amm)
+-- Helper function to extract token amounts from burn confirmation
+local function extractTokenAmounts(msg, operation)
+  local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
 
-    local usersToken = getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
+  return {
+    withdrawnUserToken = msg.Tags['Withdrawn-' .. usersToken],
+    withdrawnMintToken = msg.Tags['Withdrawn-' .. MINT_TOKEN],
+    initialUserTokenAmount = operation.amount,
+    initialMintTokenAmount = operation.mintAmount,
+    burnedLpTokens = msg.Tags['Burned-Pool-Tokens'],
+    usersToken = usersToken
+  }
+end
 
-    -- The user should receive their original token back
-    local withdrawnAmount = msg.Tags['Withdrawn-' .. usersToken]
+-- Helper function to handle impermanent loss compensation
+-- Helper function to handle impermanent loss compensation
+local function handleImpermanentLoss(tokenData, operation)
+  if bint(tokenData.withdrawnUserToken) >= bint(tokenData.initialUserTokenAmount) then
+    return '0' -- No impermanent loss
+  end
 
-    -- Verify withdrawal amount is positive
-    assert(bint(withdrawnAmount) > bint.zero(), 'Withdrawn amount must be greater than 0')
+  -- The raw difference in user tokens
+  local tokenDeficit = utils.subtract(tokenData.initialUserTokenAmount, tokenData.withdrawnUserToken)
 
-    -- Mark operation as completed first (checks-effects-interactions)
-    PendingOperations[operationId].status = 'completed'
+  -- Get the AMM for the token
+  local amm = getAmmForToken(operation.token)
 
-    -- Log the successful unstake event
-    logEvent('UnstakeComplete', {
+  -- Value calculation based on current price in the AMM
+  Send({
+    Target = amm,
+    Action = 'Get-Swap-Output',
+    Token = operation.token,
+    Quantity = tokenDeficit,
+    Swapper = operation.sender
+  }).onReply(function(reply)
+    -- The Output tag gives us how much MINT we'd get for the token deficit
+    local mintCompensation = reply.Tags.Output
+
+    -- Add a safety margin (10%) to ensure full compensation
+    mintCompensation = utils.multiply(mintCompensation, '110')
+    mintCompensation = utils.divide(mintCompensation, '100')
+
+    -- Send the compensation
+    Send({
+      Target = MINT_TOKEN,
+      Action = 'Transfer',
+      Recipient = operation.sender,
+      Quantity = mintCompensation,
+      ['X-IL-Compensation'] = 'true'
+    })
+
+    -- Send a separate notification about the IL compensation
+    Send({
+      Target = operation.sender,
+      Action = 'IL-Compensation-Complete',
+      Token = operation.token,
+      TokenName = AllowedTokensNames[operation.token],
+      TokenDeficit = tokenDeficit,
+      MintCompensation = mintCompensation,
+      ['Operation-Id'] = operation.id
+    })
+
+    -- Log the IL compensation
+    logEvent('ILCompensation', {
       sender = operation.sender,
       token = operation.token,
       tokenName = AllowedTokensNames[operation.token],
-      withdrawnAmount = withdrawnAmount,
-      mintAmount = msg.Tags['Withdrawn-' .. MINT_TOKEN],
-      lpTokensBurned = msg.Tags['Burned-Pool-Tokens'],
-      operationId = operationId
+      initialAmount = tokenData.initialUserTokenAmount,
+      withdrawnAmount = tokenData.withdrawnUserToken,
+      tokenDeficit = tokenDeficit,
+      mintCompensation = mintCompensation,
+      operationId = operation.id
     })
+  end)
 
-    -- Return original token to user
-    Send({
-      Target = operation.token,
-      Action = 'Transfer',
-      Recipient = operation.sender,
-      Quantity = withdrawnAmount
-    })
+  -- Return the token deficit for immediate reference
+  return tokenDeficit
+end
 
-    -- Notify user
-    Send({
-      Target = operation.sender,
-      Action = 'Unstake-Complete',
-      Token = operation.token,
-      TokenName = AllowedTokensNames[operation.token],
-      Amount = withdrawnAmount,
-      ['MINT-Amount'] = msg.Tags['Withdrawn-' .. MINT_TOKEN],
-      ['LP-Tokens-Burned'] = msg.Tags['Burned-Pool-Tokens']
-    })
+-- Helper function to handle user token profit sharing
+local function handleUserTokenProfitSharing(tokenData, operation)
+  if bint(tokenData.withdrawnUserToken) <= bint(tokenData.initialUserTokenAmount) then
+    return {
+      userTokenProfit = '0',
+      feeShareAmount = '0',
+      amountToSendUser = tokenData.withdrawnUserToken
+    }
+  end
+
+  -- User has made profit
+  local userTokenProfit = utils.subtract(tokenData.withdrawnUserToken, tokenData.initialUserTokenAmount)
+
+  -- Calculate fee split: 99% to user, 1% to protocol (adjustable ratio)
+  local protocolFees = utils.divide(utils.multiply(userTokenProfit, '1'), '100')
+  local userShare = utils.subtract(userTokenProfit, protocolFees)
+
+  -- Adjust amount to send user
+  local amountToSendUser = utils.subtract(tokenData.withdrawnUserToken, protocolFees)
+
+  -- Log fee sharing for user token
+  logEvent('UserTokenFeeSharing', {
+    sender = operation.sender,
+    token = operation.token,
+    tokenName = AllowedTokensNames[operation.token],
+    initialAmount = tokenData.initialUserTokenAmount,
+    withdrawnAmount = tokenData.withdrawnUserToken,
+    profit = userTokenProfit,
+    userShare = userShare,
+    protocolShare = protocolFees,
+    operationId = operation.id
+  })
+
+  return {
+    userTokenProfit = userTokenProfit,
+    feeShareAmount = userShare,
+    amountToSendUser = amountToSendUser
+  }
+end
+
+-- Helper function to handle MINT token profit sharing
+local function handleMintTokenProfitSharing(tokenData, operation)
+  if bint(tokenData.withdrawnMintToken) <= bint(tokenData.initialMintTokenAmount) then
+    return '0' -- No profit to share
+  end
+
+  local mintTokenProfit = utils.subtract(tokenData.withdrawnMintToken, tokenData.initialMintTokenAmount)
+
+  -- Calculate fee split: 99% to user, 1% to protocol (adjustable ratio)
+  local protocolFee = utils.divide(utils.multiply(mintTokenProfit, '1'), '100')
+  local userShare = utils.subtract(mintTokenProfit, protocolFee)
+  local mintToSendUser = userShare
+
+  -- Send user's share of MINT profits
+  Send({
+    Target = MINT_TOKEN,
+    Action = 'Transfer',
+    Recipient = operation.sender,
+    Quantity = mintToSendUser,
+    ['X-MINT-Profit-Share'] = 'true'
+  })
+
+  -- Log MINT profit sharing
+  logEvent('MintTokenProfitSharing', {
+    sender = operation.sender,
+    initialMintAmount = tokenData.initialMintTokenAmount,
+    withdrawnMintAmount = tokenData.withdrawnMintToken,
+    profit = mintTokenProfit,
+    userShare = mintToSendUser,
+    protocolShare = protocolFee,
+    operationId = operation.id
+  })
+
+  return mintToSendUser
+end
+
+-- Helper function to send tokens and notify user
+local function sendTokensAndNotify(operation, tokenData, results)
+  -- Return user's tokens
+  Send({
+    Target = operation.token,
+    Action = 'Transfer',
+    Recipient = operation.sender,
+    Quantity = results.amountToSendUser
+  })
+
+  -- Notify user with comprehensive details
+  Send({
+    Target = operation.sender,
+    Action = 'Unstake-Complete',
+    Token = operation.token,
+    TokenName = AllowedTokensNames[operation.token],
+    Amount = results.amountToSendUser,
+    ['Initial-User-Token-Amount'] = tokenData.initialUserTokenAmount,
+    ['Withdrawn-User-Token'] = tokenData.withdrawnUserToken,
+    ['Initial-MINT-Amount'] = tokenData.initialMintTokenAmount,
+    ['Withdrawn-MINT'] = tokenData.withdrawnMintToken,
+    ['IL-Compensation'] = results.ilCompensation,
+    ['User-Token-Profit-Share'] = results.feeShareAmount,
+    ['MINT-Profit-Share'] = results.mintProfitShare,
+    ['LP-Tokens-Burned'] = tokenData.burnedLpTokens
+  })
+end
+
+-- Main burn confirmation handler
+Handlers.add('burn-confirmation', Handlers.utils.hasMatchingTag('Action', 'Burn-Confirmation'),
+  function(msg)
+    -- Step 1: Validate the operation
+    local operation = validateBurnOperation(msg)
+
+    -- Step 2: Extract token amounts
+    local tokenData = extractTokenAmounts(msg, operation)
+
+    -- Step 3: Mark operation as completed (checks-effects-interactions)
+    PendingOperations[msg.Tags['X-Operation-Id']].status = 'completed'
+
+    -- Step 4: Process impermanent loss and profit sharing
+    local ilCompensation = handleImpermanentLoss(tokenData, operation)
+
+    local userTokenResults = handleUserTokenProfitSharing(tokenData, operation)
+
+    local mintProfitShare = handleMintTokenProfitSharing(tokenData, operation)
+
+    -- Step 5: Send tokens and notify user
+    local results = {
+      amountToSendUser = userTokenResults.amountToSendUser,
+      ilCompensation = ilCompensation,
+      feeShareAmount = userTokenResults.feeShareAmount,
+      mintProfitShare = mintProfitShare
+    }
+
+    sendTokensAndNotify(operation, tokenData, results)
   end)
 
 -- Handler to get staking position
@@ -520,7 +699,8 @@ Handlers.add('get-position', Handlers.utils.hasMatchingTag('Action', 'Get-Positi
 
     local position = StakingPositions[token][user] or {
       amount = '0',
-      lpTokens = '0'
+      lpTokens = '0',
+      mintAmount = '0'
     }
 
     msg.reply({
@@ -623,7 +803,7 @@ Handlers.add('provide-error', Handlers.utils.hasMatchingTag('Action', 'Provide-E
   end)
 
 -- Run cleanup periodically (e.g., attach to a frequently called handler)
-HHandlers.add('cleanup-stale-operations', Handlers.utils.hasMatchingTag('Action', 'Cleanup'),
+Handlers.add('cleanup-stale-operations', Handlers.utils.hasMatchingTag('Action', 'Cleanup'),
   function(msg)
     assertIsAuthorized(msg.From)
 
