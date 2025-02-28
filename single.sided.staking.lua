@@ -165,7 +165,9 @@ Handlers.add('update-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'U
   end)
 
 -- Handler to stake tokens - security improved
-Handlers.add('stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
+Handlers.add('stake', function(msg)
+    return msg.Tags.Action == 'Credit-Notice' and msg.Tags['X-User-Request'] == 'Stake'
+  end,
   function(msg)
     assertNotPaused()
 
@@ -297,6 +299,9 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
 -- Handler for refunding unused tokens - security improved
 Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
   function(msg)
+    return msg.Tags['X-User-Request'] ~= 'Stake'
+  end,
+  function(msg)
     assertNotPaused()
 
     local operationId = msg.Tags['X-Operation-Id']
@@ -317,27 +322,25 @@ Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-No
       return
     end
 
-    if (operation ~= nil) then
-      -- Verify operation status
-      assert(operation.status == 'pending' or operation.status == 'completed',
-        'Operation is in an invalid state for refunds')
+    assert(operation ~= nil, 'This credit does not belong to anyone')
+    assert(operation.status == 'pending' or operation.status == 'completed',
+      'Operation is in an invalid state for refunds')
 
-      -- Get the AMM for this token
-      local amm = getAmmForToken(operation.token)
+    -- Get the AMM for this token
+    local amm = getAmmForToken(operation.token)
 
-      -- Verify the message is from a valid source
-      assert(msg.From == amm or msg.From == operation.token,
-        'Unauthorized: refund not from recognized source')
+    -- Verify the message is from a valid source
+    assert(msg.From == amm or msg.From == operation.token,
+      'Unauthorized: refund not from recognized source')
 
-      -- Refund the user
-      Send({
-        Target = token,
-        Action = 'Transfer',
-        Recipient = operation.sender,
-        Quantity = quantity,
-        TokenName = AllowedTokensNames[operation.token],
-      })
-    end
+    -- Refund the user
+    Send({
+      Target = token,
+      Action = 'Transfer',
+      Recipient = operation.sender,
+      Quantity = quantity,
+      TokenName = AllowedTokensNames[operation.token],
+    })
   end)
 
 -- Handler for unstaking - security improved
