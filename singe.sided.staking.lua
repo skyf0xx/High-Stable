@@ -244,11 +244,11 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
     local amm = getAmmForToken(token)
 
     local position = StakingPositions[token][sender]
-    local opId = operationId(sender, token)
+    local operationId = operationId(sender, token)
 
     -- Create pending operation
-    PendingOperations[opId] = {
-      id = opId,
+    PendingOperations[operationId] = {
+      id = operationId,
       type = 'unstake',
       token = token,
       sender = sender,
@@ -263,7 +263,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
       Target = amm,
       Action = 'Burn',
       Quantity = position.lpTokens,
-      ['X-Operation-Id'] = opId,
+      ['X-Operation-Id'] = operationId,
     })
 
     -- Clear staking position
@@ -279,7 +279,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
       Token = token,
       TokenName = AllowedTokensNames[token],
       Amount = position.amount,
-      ['Operation-Id'] = opId
+      ['Operation-Id'] = operationId
     })
   end)
 
