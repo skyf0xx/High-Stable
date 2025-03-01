@@ -488,7 +488,6 @@ local function extractTokenAmounts(msg, operation)
 end
 
 -- Helper function to handle impermanent loss compensation
--- Helper function to handle impermanent loss compensation
 local function handleImpermanentLoss(tokenData, operation)
   if bint(tokenData.withdrawnUserToken) >= bint(tokenData.initialUserTokenAmount) then
     return '0' -- No impermanent loss
