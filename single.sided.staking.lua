@@ -100,7 +100,7 @@ end
 
 -- Generate operation ID
 local function operationId(sender, token, type)
-  return token .. '-' .. type .. sender .. '-' .. os.time()
+  return token .. '-' .. type .. '-' .. sender .. '-' .. os.time()
 end
 
 -- Get user's token from a pair
