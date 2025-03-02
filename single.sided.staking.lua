@@ -88,7 +88,7 @@ end
 -- Get the AMM address for a token
 local function getAmmForToken(token)
   local amm = TOKEN_AMM_MAPPINGS[token]
-  assert(amm, 'No AMM configured for token: ' .. token)
+  assert(amm ~= nil, 'No AMM configured for token: ' .. token)
   return amm
 end
 
@@ -131,7 +131,7 @@ end
 -- Operation status checking helper to reduce redundant code
 local function verifyOperation(opId, expectedType, expectedStatus)
   local operation = PendingOperations[opId]
-  assert(operation, 'Operation not found: ' .. opId)
+  assert(operation ~= nil, 'Operation not found: ' .. opId)
   assert(operation.type == expectedType,
     'Invalid operation type. Expected: ' .. expectedType .. ', got: ' .. operation.type)
   assert(operation.status == expectedStatus,
