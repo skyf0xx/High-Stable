@@ -331,12 +331,6 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
       mintAmount = msg.Tags['Provided-' .. MINT_TOKEN] -- Track MINT contribution
     }
 
-
-    -- The AMM sends LP tokens directly to the contract (ao.id)
-    -- We need to update the user's virtual balance
-    StakingPositions[operation.token][operation.sender].lpTokens =
-      utils.add(StakingPositions[operation.token][operation.sender].lpTokens, receivedLP)
-
     -- Update amount user staked in case they got a refund
     PendingOperations[operationId].amount = msg.Tags['Provided-' .. usersToken]
     PendingOperations[operationId].lpTokens = receivedLP
