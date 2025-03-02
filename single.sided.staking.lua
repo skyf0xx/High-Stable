@@ -541,18 +541,10 @@ local function handleImpermanentLoss(tokenData, operation)
       Action = 'Transfer',
       Recipient = operation.sender,
       Quantity = mintCompensation,
-      ['X-IL-Compensation'] = 'true'
-    })
-
-    -- Send a separate notification about the IL compensation
-    Send({
-      Target = operation.sender,
-      Action = 'IL-Compensation-Complete',
-      Token = operation.token,
-      TokenName = AllowedTokensNames[operation.token],
-      TokenDeficit = tokenDeficit,
-      MintCompensation = mintCompensation,
-      ['Operation-Id'] = operation.id
+      ['X-IL-Compensation'] = 'true',
+      ['X-Token-Deficit'] = tokenDeficit,
+      ['X-Deficit-Insurance-For-Token'] = AllowedTokensNames[operation.token],
+      ['X-Operation-Id'] = operation.id
     })
 
     -- Log the IL compensation
@@ -655,24 +647,19 @@ local function sendTokensAndNotify(operation, tokenData, results)
     Target = operation.token,
     Action = 'Transfer',
     Recipient = operation.sender,
-    Quantity = results.amountToSendUser
-  })
-
-  -- Notify user with comprehensive details
-  Send({
-    Target = operation.sender,
-    Action = 'Unstake-Complete',
-    Token = operation.token,
-    TokenName = AllowedTokensNames[operation.token],
-    Amount = results.amountToSendUser,
-    ['Initial-User-Token-Amount'] = tokenData.initialUserTokenAmount,
-    ['Withdrawn-User-Token'] = tokenData.withdrawnUserToken,
-    ['Initial-MINT-Amount'] = tokenData.initialMintTokenAmount,
-    ['Withdrawn-MINT'] = tokenData.withdrawnMintToken,
-    ['IL-Compensation'] = results.ilCompensation,
-    ['User-Token-Profit-Share'] = results.feeShareAmount,
-    ['MINT-Profit-Share'] = results.mintProfitShare,
-    ['LP-Tokens-Burned'] = tokenData.burnedLpTokens
+    Quantity = results.amountToSendUser,
+    ['X-Message'] = 'Unstake-Complete',
+    ['X-Token'] = operation.token,
+    ['X-TokenName'] = AllowedTokensNames[operation.token],
+    ['X-Amount'] = results.amountToSendUser,
+    ['X-Initial-User-Token-Amount'] = tokenData.initialUserTokenAmount,
+    ['X-Withdrawn-User-Token'] = tokenData.withdrawnUserToken,
+    ['X-Initial-MINT-Amount'] = tokenData.initialMintTokenAmount,
+    ['X-Withdrawn-MINT'] = tokenData.withdrawnMintToken,
+    ['X-IL-Compensation'] = results.ilCompensation,
+    ['X-User-Token-Profit-Share'] = results.feeShareAmount,
+    ['X-MINT-Profit-Share'] = results.mintProfitShare,
+    ['X-LP-Tokens-Burned'] = tokenData.burnedLpTokens
   })
 end
 
