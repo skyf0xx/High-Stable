@@ -328,7 +328,8 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
       lpTokens = utils.add(
         StakingPositions[operation.token][operation.sender].lpTokens,
         receivedLP),
-      mintAmount = msg.Tags['Provided-' .. MINT_TOKEN] -- Track MINT contribution
+      mintAmount = msg.Tags['Provided-' .. MINT_TOKEN], -- Track MINT contribution
+      stakedDate = os.time()
     }
 
     -- Update amount user staked in case they got a refund
