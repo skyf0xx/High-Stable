@@ -81,7 +81,7 @@ local function assertTokenAllowed(token)
 end
 
 -- Check if caller is a valid token contract
-local function assertIsAllowedToken(caller)
+local function assertIsAllowedTokenProcess(caller)
   assert(isTokenAllowed(caller), 'Sender is not an allowed token contract')
 end
 
@@ -200,7 +200,7 @@ Handlers.add('stake', function(msg)
     local sender = msg.Sender
 
     -- Verify sender is an allowed token contract
-    assertIsAllowedToken(token)
+    assertIsAllowedTokenProcess(token)
     assert(bint(quantity) > bint.zero(), 'Stake amount must be greater than 0')
 
     -- Get the corresponding AMM for this token
