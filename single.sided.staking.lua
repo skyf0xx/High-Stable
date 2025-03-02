@@ -419,7 +419,7 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
 
     -- Validate token and staking position
     assertTokenAllowed(token)
-    assert(StakingPositions[token][sender], 'No staking position found')
+    assert(StakingPositions[token][sender] ~= nil, 'No staking position found')
     assert(bint(StakingPositions[token][sender].amount) > bint.zero(), 'No tokens staked')
 
     -- Get the corresponding AMM for this token
