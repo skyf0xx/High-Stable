@@ -380,7 +380,9 @@ Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-No
         Target = token,
         Action = 'Transfer',
         Recipient = MINT_TOKEN,
-        Quantity = quantity
+        Quantity = quantity,
+        ['X-Operation-Id'] = operationId,
+        ['X-reason'] = 'Refund excess'
       })
       return
     end
@@ -402,7 +404,8 @@ Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-No
       Action = 'Transfer',
       Recipient = operation.sender,
       Quantity = quantity,
-      TokenName = AllowedTokensNames[operation.token],
+      ['X-Operation-Id'] = operationId,
+      ['X-reason'] = 'Refund excess'
     })
   end)
 
