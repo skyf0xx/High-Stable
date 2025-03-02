@@ -502,7 +502,7 @@ local function extractTokenAmounts(msg, operation)
     withdrawnUserToken = msg.Tags['Withdrawn-' .. usersToken],
     withdrawnMintToken = msg.Tags['Withdrawn-' .. MINT_TOKEN],
     initialUserTokenAmount = operation.amount,
-    initialMintTokenAmount = operation.mintAmount,
+    initialMintTokenAmount = operation.mintAmount, --TODO: Update for MINT burns by multiplying prev supply with current supply
     burnedLpTokens = msg.Tags['Burned-Pool-Tokens'],
     usersToken = usersToken
   }
