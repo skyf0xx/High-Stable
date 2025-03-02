@@ -188,7 +188,7 @@ Handlers.add('update-allowed-tokens', Handlers.utils.hasMatchingTag('Action', 'U
     })
   end)
 
--- Handler to stake tokens - security improved
+-- Handler to stake tokens
 Handlers.add('stake', function(msg)
     return msg.Tags.Action == 'Credit-Notice' and msg.Tags['X-User-Request'] == 'Stake'
   end,
@@ -255,31 +255,54 @@ Handlers.add('stake', function(msg)
         Action = 'Transfer',
         Recipient = ao.id,
         Quantity = adjustedMintAmount,
-        ['X-Operation-Id'] = opId
-      }).onReply(function()
-        -- After receiving MINT tokens, transfer them to the AMM as the second token
-        Send({
-          Target = MINT_TOKEN,
-          Action = 'Transfer',
-          Recipient = amm,
-          Quantity = adjustedMintAmount,
-          ['X-Action'] = 'Provide',
-          ['X-Slippage-Tolerance'] = '0.5',
-          ['X-Operation-Id'] = opId
-        })
-
-        -- Transfer the user's token to the AMM
-        Send({
-          Target = token,
-          Action = 'Transfer',
-          Recipient = amm,
-          Quantity = quantity,
-          ['X-Action'] = 'Provide',
-          ['X-Slippage-Tolerance'] = '0.5',
-          ['X-Operation-Id'] = opId
-        })
-      end)
+        ['X-Operation-Id'] = opId,
+        ['X-User-Request'] = 'Fund-Stake',
+        ['X-Token'] = token,
+        ['X-Amount'] = quantity,
+        ['X-AMM'] = amm,
+        ['X-Adjusted-Mint-Amount'] = adjustedMintAmount
+      })
     end)
+  end)
+
+-- Handler for handling MINT tokens received for staking
+Handlers.add('fund-stake', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
+  function(msg)
+    return msg.Tags['X-User-Request'] == 'Fund-Stake' and msg.From == MINT_TOKEN
+  end,
+  function(msg)
+    assertNotPaused()
+
+    local opId = msg.Tags['X-Operation-Id']
+    local token = msg.Tags['X-Token']
+    local quantity = msg.Tags['X-Amount']
+    local amm = msg.Tags['X-AMM']
+    local adjustedMintAmount = msg.Tags['X-Adjusted-Mint-Amount']
+
+    -- Verify operation exists
+    verifyOperation(opId, 'stake', 'pending')
+
+    -- After receiving MINT tokens, transfer them to the AMM as the second token
+    Send({
+      Target = MINT_TOKEN,
+      Action = 'Transfer',
+      Recipient = amm,
+      Quantity = adjustedMintAmount,
+      ['X-Action'] = 'Provide',
+      ['X-Slippage-Tolerance'] = '0.5',
+      ['X-Operation-Id'] = opId
+    })
+
+    -- Transfer the user's token to the AMM
+    Send({
+      Target = token,
+      Action = 'Transfer',
+      Recipient = amm,
+      Quantity = quantity,
+      ['X-Action'] = 'Provide',
+      ['X-Slippage-Tolerance'] = '0.5',
+      ['X-Operation-Id'] = opId
+    })
   end)
 
 -- Handler for AMM liquidity provision confirmation - security improved
@@ -289,7 +312,6 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
 
     local operationId = msg.Tags['X-Operation-Id']
 
-    -- Use our new helper function
     local operation = verifyOperation(operationId, 'stake', 'pending')
 
     -- Verify the message is from the correct AMM or factory
@@ -346,7 +368,7 @@ Handlers.add('provide-confirmation', Handlers.utils.hasMatchingTag('Action', 'Pr
 -- Handler for refunding unused tokens - security improved
 Handlers.add('refund-unused', Handlers.utils.hasMatchingTag('Action', 'Credit-Notice'),
   function(msg)
-    return msg.Tags['X-User-Request'] ~= 'Stake'
+    return msg.Tags['X-User-Request'] ~= 'Stake' and msg.Tags['X-User-Request'] ~= 'Fund-Stake'
   end,
   function(msg)
     assertNotPaused()
