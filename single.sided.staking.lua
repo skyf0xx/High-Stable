@@ -118,7 +118,7 @@ local function cleanStaleOperations()
   local staleIds = {}
 
   for id, op in pairs(PendingOperations) do
-    if op.timestamp and (now - op.timestamp) > 3600 then -- 1 hour timeout
+    if op.timestamp and (now - op.timestamp) > 3600000 then -- 1 hour timeout
       table.insert(staleIds, id)
     end
   end
