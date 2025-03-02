@@ -245,8 +245,8 @@ Handlers.add('stake', function(msg)
     }).onReply(function(reply)
       local mintAmount = reply.Tags.Output
 
-      -- Apply a small excess (3% more MINT tokens) to ensure all user tokens are used
-      local excessMultiplier = '1030' -- 103.0%
+      -- Apply a small excess (9% more MINT tokens) to ensure all user tokens are used
+      local excessMultiplier = '1090' -- 109.0%
       local adjustedMintAmount = utils.divide(utils.multiply(mintAmount, excessMultiplier), '1000')
 
       -- Request MINT tokens from protocol treasury and transfer to the AMM
