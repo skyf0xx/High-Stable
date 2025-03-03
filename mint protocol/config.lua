@@ -61,7 +61,7 @@ setmetatable(config, {
 })
 
 -- Functions to update config values (for use by admin module)
-config.updateAllowedToken = function(tokenAddress, tokenName, ammAddress)
+config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress)
   -- Update global state
   AllowedTokensNames = AllowedTokensNames or {}
   TOKEN_AMM_MAPPINGS = TOKEN_AMM_MAPPINGS or {}

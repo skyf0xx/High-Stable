@@ -61,7 +61,7 @@ admin.handlers = {
     assert(tokenAddress and tokenName and ammAddress, 'Missing token information')
 
     -- Update token configurations using config module function
-    config.updateAllowedToken(tokenAddress, tokenName, ammAddress)
+    config.updateAllowedTokens(tokenAddress, tokenName, ammAddress)
 
     -- Initialize staking positions for the new token
     if not StakingPositions[tokenAddress] then
@@ -127,7 +127,7 @@ function admin.updateTokenAmm(tokenAddress, newAmmAddress)
   if admin.isTokenConfigured(tokenAddress) then
     local tokenName = config.getAllowedTokensNames()[tokenAddress]
     -- Use the config update function to ensure consistency
-    config.updateAllowedToken(tokenAddress, tokenName, newAmmAddress)
+    config.updateAllowedTokens(tokenAddress, tokenName, newAmmAddress)
     return true
   end
   return false
