@@ -240,8 +240,71 @@ end
 unstake.handlers = {
   -- Handler for initial unstake request
   unstake = function(msg)
-    -- Rest of the function remains the same
-    -- ...
+    security.assertNotPaused()
+
+    local token = msg.Tags['Token']
+    local sender = msg.From
+
+    -- Validate token and staking position
+    security.assertTokenAllowed(token)
+    security.assertStakingPositionExists(token, sender)
+    security.assertStakingPositionHasTokens(token, sender)
+
+    -- Get the corresponding AMM for this token
+    local amm = security.getAmmForToken(token)
+
+    local position = state.getStakingPosition(token, sender)
+    local opId = utils.operationId(sender, token, 'unstake')
+
+    -- Log unstake initiated
+    utils.logEvent('UnstakeInitiated', {
+      sender = sender,
+      token = token,
+      tokenName = config.AllowedTokensNames[token],
+      amount = position and position.amount or '0',
+      lpTokens = position and position.lpTokens or '0',
+      operationId = opId
+    })
+
+    -- Store the position values before clearing
+    local positionAmount = position and position.amount or '0'
+    local positionLpTokens = position and position.lpTokens or '0'
+    local positionMintAmount = position and position.mintAmount or '0'
+
+    -- Clear staking position (checks-effects-interactions pattern)
+    state.clearStakingPosition(token, sender)
+
+    -- Create pending operation
+    state.setPendingOperation(opId, {
+      id = opId,
+      type = 'unstake',
+      token = token,
+      sender = sender,
+      amount = positionAmount,
+      lpTokens = positionLpTokens,
+      mintAmount = positionMintAmount,
+      amm = amm,
+      status = 'pending',
+      timestamp = os.time()
+    })
+
+    -- Remove liquidity from AMM by burning LP tokens
+    Send({
+      Target = amm,
+      Action = 'Burn',
+      Quantity = positionLpTokens,
+      ['X-Operation-Id'] = opId,
+    })
+
+    -- Send confirmation to user
+    Send({
+      Target = sender,
+      Action = 'Unstake-Started',
+      Token = token,
+      TokenName = config.AllowedTokensNames[token],
+      Amount = positionAmount,
+      ['Operation-Id'] = opId
+    })
   end,
 
   -- Handler for AMM burn confirmation
