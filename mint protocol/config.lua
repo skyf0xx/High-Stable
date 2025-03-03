@@ -35,7 +35,7 @@ config.getTokenAmmMappings = function()
 end
 
 -- Direct access to standard config values
-config.OPERATION_TIMEOUT = 3600 -- 1 hour timeout in seconds
+config.OPERATION_TIMEOUT = 3600000 -- 1 hour timeout in miliseconds
 
 -- Staking excess multiplier for MINT tokens
 config.EXCESS_MULTIPLIER = '1090' -- 109.0% - to ensure all user tokens are used
