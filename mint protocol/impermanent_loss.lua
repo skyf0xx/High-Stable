@@ -15,10 +15,6 @@ end
 
 -- Calculate the token deficit (raw IL amount)
 function impermanent_loss.calculateTokenDeficit(initialAmount, withdrawnAmount)
-  if not impermanent_loss.hasOccurred(withdrawnAmount, initialAmount) then
-    return '0'
-  end
-
   return utils.math.subtract(initialAmount, withdrawnAmount)
 end
 
