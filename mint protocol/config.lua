@@ -65,18 +65,6 @@ config.Colors = {
   RESET = Colors.reset
 }
 
--- Alias for backwards compatibility and simpler code
--- (Allows other modules to directly access these without using getter functions)
-setmetatable(config, {
-  __index = function(t, k)
-    if k == 'AllowedTokensNames' then
-      return config.getAllowedTokensNames()
-    elseif k == 'TOKEN_AMM_MAPPINGS' then
-      return config.getTokenAmmMappings()
-    end
-    return rawget(t, k)
-  end
-})
 
 -- Functions to update config values (for use by admin module)
 config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress)
