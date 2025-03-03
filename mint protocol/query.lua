@@ -84,7 +84,6 @@ query.handlers = {
     security.assertUserCanAccessPosition(user, msg.From)
 
     local positions = {}
-    local totalValue = '0'
 
     -- Gather all staking positions for the user across all tokens
     for token, tokenName in pairs(config.AllowedTokensNames) do

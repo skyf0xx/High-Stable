@@ -129,7 +129,6 @@ operations.handlers = {
   cleanup = function(msg)
     security.assertIsAuthorized(msg.From)
 
-    local pendingOperations = state.getPendingOperations()
     local startCount = state.countPendingOperations()
 
     local removedCount = operations.cleanStaleOperations()
