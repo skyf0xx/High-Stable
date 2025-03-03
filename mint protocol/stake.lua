@@ -29,14 +29,16 @@ stake.patterns = {
 
   -- Pattern for AMM providing error during staking process
   provideError = function(msg)
-    return msg.Tags.Action == 'Provide-Error'
+    return msg.Tags.Action == 'Credit-Notice' and
+      msg.Tags['X-Refund-Reason'] ~= nil
   end,
 
   -- Pattern for handling unused tokens (refunds)
   refundUnused = function(msg)
     return msg.Tags.Action == 'Credit-Notice' and
       msg.Tags['X-User-Request'] ~= 'Stake' and
-      msg.Tags['X-User-Request'] ~= 'Fund-Stake'
+      msg.Tags['X-User-Request'] ~= 'Fund-Stake' and
+      msg.Tags['X-Refund-Reason'] == nil
   end
 }
 
