@@ -224,11 +224,14 @@ stake.handlers = {
       operationId = operationId
     })
 
-    -- Return the user's tokens
+    -- Determine recipient based on token type
+    local recipient = operation.token == config.MINT_TOKEN and config.MINT_TOKEN or operation.sender
+
+    -- Return the tokens
     Send({
       Target = operation.token,
       Action = 'Transfer',
-      Recipient = operation.sender,
+      Recipient = recipient, --either the user or the treasury
       Quantity = operation.amount,
       ['X-Refund-Reason'] = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision'
     })
