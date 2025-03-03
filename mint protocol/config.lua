@@ -6,14 +6,32 @@ local config = {}
 -- Token constants
 config.MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
 
+-- Initialize configuration state from existing globals or use defaults
+config.AllowedTokensNames = config.AllowedTokensNames or {
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'Q Arweave (qAR)',
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'Wrapped AR (wAR)',
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Number Always Bigger (NAB)',
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'AO (AO Token)',
+  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'USDC (Ethereum-Wrapped USDC)'
+}
+
+config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'VBx1jKKKkr7t4RkJg8axqZY2eNpDZSOxVhcGwF5tWAA', -- MINT/ qAR AMM
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'pX0L5GY09W-EL1zcjrGPYVy-B3iu5HWF53S2_GY0ViI', -- MINT/ wAR AMM
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'AzxYcLUMPJvjz9LPJ-A-6yzwW9ScQYl8TLVL-84y2PE', -- MINT/ NAB AMM
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'a98-hjIuPJeK89RwZ3jMkoN2iOuQkTkKrMWi4O3DRIY', -- MINT/ AO AMM
+  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'a98-hjIuPJeK89RwZ3jMkoN2iOuQkTkKrMWi4O3DRIY', -- MINT/ USDC AMM
+}
+
+
 -- Reference global state for allowed tokens configuration
 -- This ensures the config module always reflects current state
 config.getAllowedTokensNames = function()
-  return AllowedTokensNames or {}
+  return config.AllowedTokensNames or {}
 end
 
 config.getTokenAmmMappings = function()
-  return TOKEN_AMM_MAPPINGS or {}
+  return config.TOKEN_AMM_MAPPINGS or {}
 end
 
 -- Direct access to standard config values
@@ -63,11 +81,11 @@ setmetatable(config, {
 -- Functions to update config values (for use by admin module)
 config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress)
   -- Update global state
-  AllowedTokensNames = AllowedTokensNames or {}
-  TOKEN_AMM_MAPPINGS = TOKEN_AMM_MAPPINGS or {}
+  config.AllowedTokensNames = config.AllowedTokensNames or {}
+  config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {}
 
-  AllowedTokensNames[tokenAddress] = tokenName
-  TOKEN_AMM_MAPPINGS[tokenAddress] = ammAddress
+  config.AllowedTokensNames[tokenAddress] = tokenName
+  config.TOKEN_AMM_MAPPINGS[tokenAddress] = ammAddress
 
   return true
 end
