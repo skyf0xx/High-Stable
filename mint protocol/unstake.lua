@@ -35,15 +35,15 @@ unstake.patterns = {
       sender = sender,
       token = token,
       tokenName = config.AllowedTokensNames[token],
-      amount = position.amount,
-      lpTokens = position.lpTokens,
+      amount = position and position.amount or '0',
+      lpTokens = position and position.lpTokens or '0',
       operationId = opId
     })
 
     -- Store the position values before clearing
-    local positionAmount = position.amount
-    local positionLpTokens = position.lpTokens
-    local positionMintAmount = position.mintAmount or '0'
+    local positionAmount = position and position.amount or '0'
+    local positionLpTokens = position and position.lpTokens or '0'
+    local positionMintAmount = position and position.mintAmount or '0'
 
     -- Clear staking position (checks-effects-interactions pattern)
     state.clearStakingPosition(token, sender)
