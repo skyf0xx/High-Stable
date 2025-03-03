@@ -218,7 +218,7 @@ stake.handlers = {
       token = operation.token,
       tokenName = config.AllowedTokensNames[operation.token],
       amount = operation.amount,
-      error = msg.Tags['Result'] or 'Unknown error during liquidity provision',
+      error = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision',
       operationId = operationId
     })
 
@@ -227,17 +227,8 @@ stake.handlers = {
       Target = operation.token,
       Action = 'Transfer',
       Recipient = operation.sender,
-      Quantity = operation.amount
-    })
-
-    -- Notify user of failed stake
-    Send({
-      Target = operation.sender,
-      Action = 'Stake-Failed',
-      Token = operation.token,
-      TokenName = config.AllowedTokensNames[operation.token],
-      Amount = operation.amount,
-      Error = msg.Tags['Result'] or 'Unknown error during liquidity provision'
+      Quantity = operation.amount,
+      ['X-Refund-Reason'] = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision'
     })
   end,
 
