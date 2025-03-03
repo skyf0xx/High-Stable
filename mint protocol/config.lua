@@ -4,7 +4,7 @@
 local config = {}
 
 -- Token constants
-config.MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
+config.MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z2WZrx9quLeZOu0'
 
 -- Initialize configuration state from existing globals or use defaults
 config.AllowedTokensNames = config.AllowedTokensNames or {
@@ -23,6 +23,18 @@ config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'a98-hjIuPJeK89RwZ3jMkoN2iOuQkTkKrMWi4O3DRIY', -- MINT/ USDC AMM
 }
 
+-- Token decimals mapping - defines how many decimal places each token uses
+config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
+  -- MINT token decimal places
+  [config.MINT_TOKEN] = 6,
+
+  -- Other tokens decimal places
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 12, -- qAR (12 decimals)
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 12, -- wAR (12 decimals)
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 18, -- NAB (18 decimals)
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 18, -- AO (18 decimals)
+  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 6,  -- USDC (6 decimals)
+}
 
 -- Reference global state for allowed tokens configuration
 -- This ensures the config module always reflects current state
@@ -32,6 +44,10 @@ end
 
 config.getTokenAmmMappings = function()
   return config.TOKEN_AMM_MAPPINGS or {}
+end
+
+config.getTokenDecimals = function()
+  return config.TOKEN_DECIMALS or {}
 end
 
 -- Direct access to standard config values
@@ -67,15 +83,28 @@ config.Colors = {
 
 
 -- Functions to update config values (for use by admin module)
-config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress)
+config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress, decimals)
   -- Update global state
   config.AllowedTokensNames = config.AllowedTokensNames or {}
   config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {}
+  config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {}
 
   config.AllowedTokensNames[tokenAddress] = tokenName
   config.TOKEN_AMM_MAPPINGS[tokenAddress] = ammAddress
 
+  config.TOKEN_DECIMALS[tokenAddress] = decimals
+
   return true
+end
+
+-- Get decimals for a specific token
+config.getDecimalsForToken = function(tokenAddress)
+  local decimals = config.TOKEN_DECIMALS[tokenAddress]
+  if decimals then
+    return decimals
+  end
+  -- Default to 6 if not specified (common for many tokens)
+  return 6
 end
 
 return config

@@ -70,8 +70,9 @@ utils.logEvent = function(eventType, details)
 end
 
 -- Helper function to format token quantities for display
-utils.formatTokenQuantity = function(quantity, decimals)
-  decimals = decimals or 6
+utils.formatTokenQuantity = function(quantity, token)
+  -- Get the correct number of decimals for this token
+  local decimals = config.getDecimalsForToken(token)
 
   -- Convert to string to ensure consistent handling
   local quantityStr = tostring(quantity)

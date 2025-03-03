@@ -134,7 +134,8 @@ query.handlers = {
       table.insert(allowedTokens, {
         address = token,
         name = name,
-        amm = config.TOKEN_AMM_MAPPINGS[token]
+        amm = config.TOKEN_AMM_MAPPINGS[token],
+        decimals = config.getDecimalsForToken(token)
       })
     end
 
@@ -195,7 +196,8 @@ function query.getTokenInfo(tokenAddress)
   return {
     address = tokenAddress,
     name = config.AllowedTokensNames[tokenAddress],
-    amm = config.TOKEN_AMM_MAPPINGS[tokenAddress]
+    amm = config.TOKEN_AMM_MAPPINGS[tokenAddress],
+    decimals = config.getDecimalsForToken(tokenAddress)
   }
 end
 

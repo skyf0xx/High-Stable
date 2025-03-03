@@ -48,6 +48,7 @@ admin.handlers = {
   end,
 
   -- Handler for updating allowed tokens
+  -- Handler for updating allowed tokens
   updateAllowedTokens = function(msg)
     -- Verify the caller is authorized (contract owner)
     security.assertIsAuthorized(msg.From)
@@ -56,12 +57,18 @@ admin.handlers = {
     local tokenAddress = msg.Tags['Token-Address']
     local tokenName = msg.Tags['Token-Name']
     local ammAddress = msg.Tags['AMM-Address']
+    local decimals = msg.Tags['Token-Decimals']
 
     -- Validate required information is present
-    assert(tokenAddress and tokenName and ammAddress, 'Missing token information')
+    assert(tokenAddress and tokenName and ammAddress and decimals, 'Missing token information')
+
+    -- Convert decimals to number if present
+    local decimalPlaces = tonumber(decimals)
+    assert(decimalPlaces ~= nil, 'Token-Decimals must be a valid number')
+
 
     -- Update token configurations using config module function
-    config.updateAllowedTokens(tokenAddress, tokenName, ammAddress)
+    config.updateAllowedTokens(tokenAddress, tokenName, ammAddress, decimalPlaces)
 
     -- Initialize staking positions for the new token
     if not StakingPositions[tokenAddress] then
@@ -73,7 +80,8 @@ admin.handlers = {
       caller = msg.From,
       tokenAddress = tokenAddress,
       tokenName = tokenName,
-      ammAddress = ammAddress
+      ammAddress = ammAddress,
+      decimals = decimalPlaces
     })
 
     -- Reply to confirm the action
@@ -81,7 +89,8 @@ admin.handlers = {
       Action = 'Allowed-Tokens-Updated',
       ['Token-Address'] = tokenAddress,
       ['Token-Name'] = tokenName,
-      ['AMM-Address'] = ammAddress
+      ['AMM-Address'] = ammAddress,
+      ['Token-Decimals'] = decimals
     })
   end
 }
