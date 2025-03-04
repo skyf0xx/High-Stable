@@ -204,7 +204,7 @@ stake.handlers = {
     security.assertIsValidAmm(msg.From, operation.amm)
 
     -- Mark operation as failed (checks-effects-interactions pattern)
-    state.failPendingOperation(operationId)
+    operations.fail(operationId)
 
     -- Log the failed stake event
     utils.logEvent('StakeFailed', {
@@ -254,7 +254,7 @@ stake.handlers = {
     end
 
     -- For other tokens, verify operation exists
-    local operation = state.getPendingOperation(operationId)
+    local operation = operations.get(operationId)
     assert(operation ~= nil, 'This credit does not belong to anyone')
     assert(operation.status == 'pending' or operation.status == 'completed',
       'Operation is in an invalid state for refunds')

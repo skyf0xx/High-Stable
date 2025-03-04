@@ -358,7 +358,7 @@ unstake.handlers = {
     local tokenData = extractTokenAmounts(msg, operation)
 
     -- Step 3: Mark operation as completed (checks-effects-interactions)
-    state.completePendingOperation(msg.Tags['X-Operation-Id'])
+    operations.complete(msg.Tags['X-Operation-Id'])
 
     -- Step 4: Process impermanent loss and profit sharing
     -- Use the impermanent_loss module to handle IL compensation
