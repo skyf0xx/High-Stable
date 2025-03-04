@@ -5,6 +5,8 @@ local config = require('config')
 local state = require('state')
 local utils = require('utils')
 local security = require('security')
+local operations = require('operations')
+
 
 local stake = {}
 
@@ -59,17 +61,7 @@ stake.handlers = {
     -- Get the corresponding AMM for this token
     local amm = security.getAmmForToken(token)
 
-    -- Create pending operation with timestamp
-    local opId = utils.operationId(sender, token, 'stake')
-    state.setPendingOperation(opId, {
-      type = 'stake',
-      token = token,
-      sender = sender,
-      amount = quantity,
-      amm = amm,
-      status = 'pending',
-      timestamp = os.time()
-    })
+    local opId, operation = operations.createOperation('stake', token, sender, quantity, amm)
 
     -- Log stake initiated
     utils.logEvent('StakeInitiated', {

@@ -38,7 +38,7 @@ operations.cleanStaleOperations = function()
 end
 
 -- Create a new operation
-operations.createOperation = function(type, token, sender, amount, amm)
+operations.createOperation = function(type, token, sender, amount, amm, additionalFields)
   local opId = utils.operationId(sender, token, type)
 
   local operation = {
@@ -52,16 +52,11 @@ operations.createOperation = function(type, token, sender, amount, amm)
     timestamp = os.time()
   }
 
-  -- Add mintAmount field for stake operations
-  if type == 'stake' then
-    operation.mintAmount = '0'
-  end
-
-  -- Add lpTokens field for unstake operations
-  if type == 'unstake' then
-    local position = state.getStakingPosition(token, sender)
-    operation.lpTokens = position and position.lpTokens or '0'
-    operation.mintAmount = position and position.mintAmount or '0'
+  -- Merge any additional fields provided
+  if additionalFields then
+    for k, v in pairs(additionalFields) do
+      operation[k] = v
+    end
   end
 
   state.setPendingOperation(opId, operation)

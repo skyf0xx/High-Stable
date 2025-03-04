@@ -6,6 +6,7 @@ local state = require('state')
 local utils = require('utils')
 local security = require('security')
 local impermanent_loss = require('impermanent_loss') -- Add this import
+local operations = require('operations')
 
 local unstake = {}
 
@@ -28,17 +29,8 @@ unstake.patterns = {
     local amm = security.getAmmForToken(token)
 
     local position = state.getStakingPosition(token, sender)
-    local opId = utils.operationId(sender, token, 'unstake')
 
-    -- Log unstake initiated
-    utils.logEvent('UnstakeInitiated', {
-      sender = sender,
-      token = token,
-      tokenName = config.AllowedTokensNames[token],
-      amount = position and position.amount or '0',
-      lpTokens = position and position.lpTokens or '0',
-      operationId = opId
-    })
+
 
     -- Store the position values before clearing
     local positionAmount = position and position.amount or '0'
@@ -48,18 +40,20 @@ unstake.patterns = {
     -- Clear staking position (checks-effects-interactions pattern)
     state.clearStakingPosition(token, sender)
 
-    -- Create pending operation
-    state.setPendingOperation(opId, {
-      id = opId,
-      type = 'unstake',
-      token = token,
-      sender = sender,
-      amount = positionAmount,
+    local additionalFields = {
       lpTokens = positionLpTokens,
-      mintAmount = positionMintAmount,
-      amm = amm,
-      status = 'pending',
-      timestamp = os.time()
+      mintAmount = positionMintAmount
+    }
+    local opId, operation = operations.createOperation('unstake', token, sender, positionAmount, amm, additionalFields)
+
+    -- Log unstake initiated
+    utils.logEvent('UnstakeInitiated', {
+      sender = sender,
+      token = token,
+      tokenName = config.AllowedTokensNames[token],
+      amount = position and position.amount or '0',
+      lpTokens = position and position.lpTokens or '0',
+      operationId = opId
     })
 
     -- Remove liquidity from AMM by burning LP tokens
