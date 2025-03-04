@@ -16,11 +16,11 @@ config.AllowedTokensNames = config.AllowedTokensNames or {
 }
 
 config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
-  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'VBx1jKKKkr7t4RkJg8axqZY2eNpDZSOxVhcGwF5tWAA', -- MINT/ qAR AMM
-  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'pX0L5GY09W-EL1zcjrGPYVy-B3iu5HWF53S2_GY0ViI', -- MINT/ wAR AMM
-  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'AzxYcLUMPJvjz9LPJ-A-6yzwW9ScQYl8TLVL-84y2PE', -- MINT/ NAB AMM
-  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'a98-hjIuPJeK89RwZ3jMkoN2iOuQkTkKrMWi4O3DRIY', -- MINT/ AO AMM
-  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'a98-hjIuPJeK89RwZ3jMkoN2iOuQkTkKrMWi4O3DRIY', -- MINT/ USDC AMM
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'Ruw6Q5gVgZ-isWhRGW4LVvTu6rMost-J5SKsF4rF-rA', -- MINT/ qAR AMM -
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'cmZi84AA3f717pna0ck-gM93wq1j1exRdNLdt7saG9o', -- MINT/ wAR AMM -
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI', -- MINT/ NAB AMM -
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'DMB9l4HSp-9qBvXtxDqDTnZZ3qFNCwJgivwSv0XEgN0', -- MINT/ AO AMM -
+  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'oudDA-JUZi14kbKFIhu4X34qGYHbtZnHdtYWEqbtkO0', -- MINT/ USDC AMM -
 }
 
 -- Token decimals mapping - defines how many decimal places each token uses
