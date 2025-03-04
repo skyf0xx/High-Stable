@@ -41,7 +41,7 @@ local function registerHandlers()
 end
 
 -- Log contract initialization
-print(Colors.blue .. 'Single-Sided Staking Contract Initialized - Version 1.0.0' .. Colors.reset)
+print(Colors.blue .. 'Single-Sided Staking Contract Initialized' .. Colors.reset)
 
 -- Register all handlers
 registerHandlers()
