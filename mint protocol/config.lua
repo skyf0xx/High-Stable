@@ -26,13 +26,13 @@ config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
 -- Token decimals mapping - defines how many decimal places each token uses
 config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
   -- MINT token decimal places
-  [config.MINT_TOKEN] = 6,
+  [config.MINT_TOKEN] = 8,
 
   -- Other tokens decimal places
   ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 12, -- qAR (12 decimals)
   ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 12, -- wAR (12 decimals)
-  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 18, -- NAB (18 decimals)
-  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 18, -- AO (18 decimals)
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 8,  -- NAB (8 decimals)
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 12, -- AO (12 decimals)
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 6,  -- USDC (6 decimals)
 }
 
