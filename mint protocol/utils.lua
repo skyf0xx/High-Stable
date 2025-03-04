@@ -195,4 +195,8 @@ utils.parseJson = function(jsonStr)
   end
 end
 
+utils.math.isLessThanOrEqual = function(a, b)
+  return bint(a) <= bint(b)
+end
+
 return utils

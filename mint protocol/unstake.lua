@@ -152,14 +152,57 @@ local function handleUserTokenProfitSharing(tokenData, operation)
   }
 end
 
--- Helper function to handle MINT token profit sharing-- Helper function to handle MINT token profit sharing
+-- Calculate the rebased value of MINT tokens after accounting for weekly rebasing
+local function calculateRebasedMintAmount(initialAmount, stakedDate, currentDate)
+  -- Calculate number of weeks between staking and unstaking
+  local secondsPerWeek = 7 * 24 * 60 * 60
+  local stakingDurationSeconds = currentDate - stakedDate
+  local weeks = math.floor(stakingDurationSeconds / secondsPerWeek)
+
+  -- If staked for less than a week, no rebasing occurred
+  if weeks == 0 then
+    return initialAmount
+  end
+
+  -- Calculate rebased amount
+  -- For each week, apply (1 - 0.0025) reduction
+  local rebaseRatePerWeek = 0.9975 -- 1 - 0.0025 (weekly burn rate)
+
+  -- Convert the rebase rate to a fixed-point representation with 8 decimal places
+  local denomination = 8
+  local rebaseFactor = math.floor(rebaseRatePerWeek ^ weeks * 10 ^ denomination)
+  local rebaseFactorBint = utils.math.toBalanceValue(tostring(rebaseFactor))
+  local divisor = utils.math.toBalanceValue(tostring(10 ^ denomination))
+
+  -- Apply rebasing to initial amount
+  local rebasedAmount = utils.math.multiply(initialAmount, rebaseFactorBint)
+  rebasedAmount = utils.math.divide(rebasedAmount, divisor)
+
+  return rebasedAmount
+end
+
+-- Helper function to handle MINT token profit sharing with rebasing adjustments
 local function handleMintTokenProfitSharing(tokenData, operation)
-  if utils.math.isLessThan(tokenData.withdrawnMintToken, tokenData.initialMintTokenAmount) or
-    utils.math.isEqual(tokenData.withdrawnMintToken, tokenData.initialMintTokenAmount) then
+  -- If initial amount is zero or withdrawnMintToken is less than or equal to zero, there's no profit
+  if utils.math.isZero(tokenData.initialMintTokenAmount) or
+    not utils.math.isPositive(tokenData.withdrawnMintToken) then
     return '0' -- No profit to share
   end
 
-  local mintTokenProfit = utils.math.subtract(tokenData.withdrawnMintToken, tokenData.initialMintTokenAmount)
+  -- Calculate what the initial amount would be worth now, after rebasing
+  local rebasedInitialAmount = calculateRebasedMintAmount(
+    tokenData.initialMintTokenAmount,
+    operation.timestamp,
+    os.time()
+  )
+
+  -- If withdrawn amount is less than the rebased initial amount, there's no profit
+  if utils.math.isLessThan(tokenData.withdrawnMintToken, rebasedInitialAmount) then
+    return '0'
+  end
+
+  -- Calculate actual profit by comparing withdrawn amount to rebased initial amount
+  local mintTokenProfit = utils.math.subtract(tokenData.withdrawnMintToken, rebasedInitialAmount)
 
   -- Calculate fee split: protocol fee percentage to treasury, rest to user
   local protocolFee = utils.math.divide(
@@ -175,22 +218,26 @@ local function handleMintTokenProfitSharing(tokenData, operation)
     Recipient = operation.sender,
     Quantity = userShare,
     ['X-MINT-Profit-Share'] = 'true',
-    ['X-Operation-Id'] = operation.id
+    ['X-Operation-Id'] = operation.id,
+    ['X-Rebased-Initial-Amount'] = rebasedInitialAmount -- Add this for transparency
   })
 
-  -- Log MINT profit sharing
+  -- Log MINT profit sharing with rebasing info
   utils.logEvent('MintTokenProfitSharing', {
     sender = operation.sender,
     initialMintAmount = tokenData.initialMintTokenAmount,
+    rebasedInitialAmount = rebasedInitialAmount,
     withdrawnMintAmount = tokenData.withdrawnMintToken,
     profit = mintTokenProfit,
     userShare = userShare,
     protocolShare = protocolFee,
+    weeks = math.floor((os.time() - operation.timestamp) / (7 * 24 * 60 * 60)),
     operationId = operation.id
   })
 
   return userShare
 end
+
 
 -- Helper function to send tokens and notify user
 local function sendTokensAndNotify(operation, tokenData, results)
