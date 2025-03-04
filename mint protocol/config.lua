@@ -4,7 +4,7 @@
 local config = {}
 
 -- Token constants
-config.MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z2WZrx9quLeZOu0'
+config.MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
 
 -- Initialize configuration state from existing globals or use defaults
 config.AllowedTokensNames = config.AllowedTokensNames or {
