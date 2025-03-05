@@ -31,6 +31,7 @@ local function registerHandlers()
   Handlers.add('get-position', query.patterns.getPosition, query.handlers.getPosition)
   Handlers.add('get-all-positions', query.patterns.getAllPositions, query.handlers.getAllPositions)
   Handlers.add('get-allowed-tokens', query.patterns.getAllowedTokens, query.handlers.getAllowedTokens)
+  Handlers.add('get-insurance-info', query.patterns.getInsuranceInfo, query.handlers.getInsuranceInfo)
 
   -- Error handlers
   Handlers.add('provide-error', stake.patterns.provideError, stake.handlers.provideError)

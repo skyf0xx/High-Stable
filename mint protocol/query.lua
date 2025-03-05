@@ -24,6 +24,10 @@ query.patterns = {
   -- Pattern for getting allowed tokens list
   getAllowedTokens = function(msg)
     return msg.Tags.Action == 'Get-Allowed-Tokens'
+  end,
+
+  getInsuranceInfo = function(msg)
+    return msg.Tags.Action == 'Get-Insurance-Info'
   end
 }
 
@@ -144,6 +148,94 @@ query.handlers = {
       Action = 'Allowed-Tokens',
       Data = json.encode(allowedTokens),
       Count = tostring(#allowedTokens)
+    })
+  end,
+
+  getInsuranceInfo = function(msg)
+    -- Calculate human-readable MINT maximum compensation
+    local mintDecimals = config.TOKEN_DECIMALS[config.MINT_TOKEN] or 8
+    local maxCompHuman = tonumber(config.IL_MAX_COMP_PER_USER) / (10 ^ mintDecimals)
+
+    -- Basic insurance info response
+    local responseData = {
+      version = config.VERSION,
+      maxVestingDays = config.IL_MAX_VESTING_DAYS,
+      maxCoveragePercentage = config.IL_MAX_COVERAGE_PERCENTAGE .. '%',
+      maxCompensationPerUser = maxCompHuman .. ' MINT',
+      protocolFeePercentage = config.PROTOCOL_FEE_PERCENTAGE .. '%',
+      rebasingBurnRate = '0.25% weekly for MINT token',
+      allowedTokens = {}
+    }
+
+    -- Add coverage explanation
+    responseData.coverageExplanation = {
+      formula = 'MINT_comp = min(IL_X * Coverage% * R_final, COMP_CAP)',
+      coverageFormula = 'Coverage% = min(t / T_max, 1) * C_max',
+      ilFormula = 'IL_X = max(Deposited_X * (1 - sqrt(R_final / R_initial)), 0)',
+      explanation = string.format(
+        'Coverage increases linearly from 0%% on day 0 to %s%% after %d days. The compensation in MINT tokens equals the impermanent loss amount multiplied by the coverage percentage and the current token/MINT price ratio, up to a maximum of %s MINT per user.',
+        config.IL_MAX_COVERAGE_PERCENTAGE,
+        config.IL_MAX_VESTING_DAYS,
+        maxCompHuman
+      )
+    }
+
+    -- Add coverage examples
+    responseData.coverageExamples = {
+      ['Day 1'] = string.format('%.2f%%', (1 / config.IL_MAX_VESTING_DAYS) * tonumber(config.IL_MAX_COVERAGE_PERCENTAGE)),
+      ['Day 7'] = string.format('%.2f%%', (7 / config.IL_MAX_VESTING_DAYS) * tonumber(config.IL_MAX_COVERAGE_PERCENTAGE)),
+      ['Day 15'] = string.format('%.2f%%',
+        (15 / config.IL_MAX_VESTING_DAYS) * tonumber(config.IL_MAX_COVERAGE_PERCENTAGE)),
+      ['Day 30+'] = config.IL_MAX_COVERAGE_PERCENTAGE .. '% (maximum)'
+    }
+
+    -- Add practical example
+    responseData.practicalExample = {
+      scenario = 'User stakes 100 tokens when the price is 1 MINT = 2 tokens (0.5 tokens per MINT)',
+      priceChange = 'Price changes to 1 MINT = 1 token (1 token per MINT)',
+      ilAmount = 'Impermanent loss = 29.3 tokens',
+      stakingDuration = 'User has staked for 15 days (15/' .. config.IL_MAX_VESTING_DAYS .. ' = 50% of vesting)',
+      coverage = 'Coverage = 50% of ' ..
+        config.IL_MAX_COVERAGE_PERCENTAGE .. '% = ' .. (tonumber(config.IL_MAX_COVERAGE_PERCENTAGE) / 2) .. '%',
+      compensation = string.format('Compensation = 29.3 tokens × %d%% × 1 token/MINT = %.2f MINT',
+        tonumber(config.IL_MAX_COVERAGE_PERCENTAGE) / 2, 29.3 * (tonumber(config.IL_MAX_COVERAGE_PERCENTAGE) / 100 / 2) *
+        1)
+    }
+
+    -- Add all supported tokens
+    for tokenAddr, tokenName in pairs(config.AllowedTokensNames) do
+      responseData.allowedTokens[tokenAddr] = {
+        name = tokenName,
+        amm = config.TOKEN_AMM_MAPPINGS[tokenAddr],
+        decimals = config.getDecimalsForToken(tokenAddr)
+      }
+    end
+
+    -- Count number of tokens (fix for table.getn issue)
+    local tokenCount = 0
+    for _, _ in pairs(responseData.allowedTokens) do
+      tokenCount = tokenCount + 1
+    end
+
+
+    -- Safe JSON encoding with pcall for general info
+    local success, encodedData = pcall(json.encode, responseData)
+    if not success then
+      msg.reply({
+        Action = 'Insurance-Info-Error',
+        Error = 'JSON encoding error'
+      })
+      return
+    end
+
+    -- Reply with general insurance info for all tokens
+    msg.reply({
+      Action = 'Insurance-Info',
+      Data = encodedData,
+      ['Max-Vesting-Days'] = tostring(config.IL_MAX_VESTING_DAYS),
+      ['Max-Coverage-Percentage'] = config.IL_MAX_COVERAGE_PERCENTAGE .. '%',
+      ['Max-Compensation'] = maxCompHuman .. ' MINT',
+      ['Supported-Tokens'] = tostring(tokenCount)
     })
   end
 }
