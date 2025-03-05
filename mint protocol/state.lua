@@ -77,7 +77,8 @@ function state.initializeStakingPosition(token, user)
       amount = '0',
       lpTokens = '0',
       mintAmount = '0',
-      stakedDate = nil
+      stakedDate = nil,
+      initialPriceRatio = nil -- Add field to store initial X/MINT ratio
     }
   end
 

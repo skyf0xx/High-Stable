@@ -36,6 +36,17 @@ config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 6,  -- USDC (6 decimals)
 }
 
+-- Impermanent loss protection parameters
+config.IL_MAX_VESTING_DAYS = 30          -- T_max: full vesting period in days
+config.IL_MAX_COVERAGE_PERCENTAGE = '50' -- C_max: maximum coverage percentage (50%)
+config.IL_COVERAGE_DIVISOR = '100'       -- Divisor for percentage calculations
+-- Maximum compensation per user: e.g. 100 MINT tokens (with 8 decimal places)
+local MINT_MAX_COMP = 50000
+local MINT_DECIMALS = config.TOKEN_DECIMALS[config.MINT_TOKEN] -- Get decimals from config
+config.IL_MAX_COMP_PER_USER = tostring(MINT_MAX_COMP * 10 ^ MINT_DECIMALS)
+
+
+
 -- Reference global state for allowed tokens configuration
 -- This ensures the config module always reflects current state
 config.getAllowedTokensNames = function()

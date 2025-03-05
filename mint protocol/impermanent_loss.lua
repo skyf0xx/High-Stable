@@ -19,71 +19,147 @@ function impermanent_loss.calculateTokenDeficit(initialAmount, withdrawnAmount)
 end
 
 -- Calculate the MINT token amount needed to compensate for impermanent loss
-function impermanent_loss.calculateCompensationAmount(mintAmount, safetyMargin)
-  -- Apply safety margin (default is 10% extra to ensure full compensation)
-  safetyMargin = safetyMargin or config.IL_COMPENSATION_MARGIN
+-- Calculate compensation amount based on staking duration and other factors
+function impermanent_loss.calculateCompensationAmount(ilAmount, finalPriceRatio, initialStakeDate)
+  -- Calculate staking duration in days
+  local stakingDurationSeconds = os.time() - initialStakeDate
+  local stakingDurationDays = stakingDurationSeconds / (24 * 60 * 60)
 
-  local adjustedAmount = utils.math.multiply(mintAmount, safetyMargin)
-  return utils.math.divide(adjustedAmount, config.IL_COMPENSATION_DIVISOR)
+  -- Calculate coverage percentage based on vesting
+  local vestingRatio = math.min(stakingDurationDays / config.IL_MAX_VESTING_DAYS, 1)
+  local coveragePercentage = utils.math.multiply(
+    tostring(vestingRatio * 100), -- Convert to percentage
+    config.IL_MAX_COVERAGE_PERCENTAGE
+  )
+  coveragePercentage = utils.math.divide(coveragePercentage, config.IL_COVERAGE_DIVISOR)
+
+  -- Calculate compensation: IL_X * Coverage% * R_final
+  local mintCompensation = utils.math.multiply(ilAmount, finalPriceRatio)
+  mintCompensation = utils.math.multiply(mintCompensation, coveragePercentage)
+  mintCompensation = utils.math.divide(mintCompensation, config.IL_COVERAGE_DIVISOR)
+
+  -- Apply compensation cap
+  if utils.math.isGreaterThan(mintCompensation, config.IL_MAX_COMP_PER_USER) then
+    return config.IL_MAX_COMP_PER_USER
+  end
+
+  return mintCompensation, coveragePercentage
 end
 
 -- Process impermanent loss compensation for an unstaking operation
+-- Process impermanent loss compensation for an unstaking operation
 function impermanent_loss.processCompensation(tokenData, operation)
-  -- If no impermanent loss, return early
-  if not impermanent_loss.hasOccurred(tokenData.withdrawnUserToken, tokenData.initialUserTokenAmount) then
-    return '0'
-  end
+  -- Get position to retrieve initial price ratio and stake date
+  local position = state.getStakingPosition(operation.token, operation.sender) or {}
+  local initialPriceRatio = position.initialPriceRatio
+  local initialStakeDate = position.stakedDate or operation.timestamp
 
-  -- Calculate token deficit
-  local tokenDeficit = impermanent_loss.calculateTokenDeficit(
-    tokenData.initialUserTokenAmount,
-    tokenData.withdrawnUserToken
-  )
+  -- If no impermanent loss detected through the simple method, check using standard formula
+  local simpleIL = impermanent_loss.hasOccurred(tokenData.withdrawnUserToken, tokenData.initialUserTokenAmount)
+
+  -- If no IL detected through simple method and no initial price ratio, return early
+  if not simpleIL and not initialPriceRatio then
+    return '0'
+  end -- Fixed: Changed closing bracket to 'end'
 
   -- Get the AMM for the token
   local amm = security.getAmmForToken(operation.token)
 
-  -- Query AMM for equivalent MINT value of the token deficit
+  -- Query AMM for current price ratio (final ratio)
   Send({
     Target = amm,
-    Action = 'Get-Swap-Output',
-    Token = operation.token,
-    Quantity = tokenDeficit,
-    Swapper = operation.sender
+    Action = 'Get-Reserves'
   }).onReply(function(reply)
-    -- Calculate compensation amount with safety margin
-    local mintCompensation = impermanent_loss.calculateCompensationAmount(reply.Tags.Output)
+    local reserve1 = reply.Tags['Reserve-1']
+    local reserve2 = reply.Tags['Reserve-2']
+    local token1 = reply.Tags['Token-1']
+    local token2 = reply.Tags['Token-2']
 
-    -- Send the compensation to the user
+    -- Determine which reserve corresponds to which token
+    local mintReserve, tokenReserve
+    if token1 == config.MINT_TOKEN then
+      mintReserve = reserve1
+      tokenReserve = reserve2
+    else
+      mintReserve = reserve2
+      tokenReserve = reserve1
+    end
+
+    -- Calculate current token/MINT ratio
+    local finalPriceRatio = utils.math.divide(tokenReserve, mintReserve)
+
+    -- Calculate IL amount
+    local ilAmount
+
+    -- If we have initial price ratio, use standard IL formula
+    if initialPriceRatio then
+      ilAmount = impermanent_loss.calculateStandardIL(
+        tokenData.initialUserTokenAmount,
+        initialPriceRatio,
+        finalPriceRatio
+      )
+    else
+      -- Backward compatibility: use simple token deficit method
+      ilAmount = impermanent_loss.calculateTokenDeficit(
+        tokenData.initialUserTokenAmount,
+        tokenData.withdrawnUserToken
+      )
+    end -- Fixed: Changed closing bracket to 'end'
+
+    -- If no IL detected, return
+    if utils.math.isZero(ilAmount) then
+      return
+    end -- Fixed: Changed closing bracket to 'end'
+
+    -- Calculate compensation amount and coverage percentage
+    local mintCompensation, coveragePercentage = impermanent_loss.calculateCompensationAmount(
+      ilAmount,
+      finalPriceRatio,
+      initialStakeDate
+    )
+
+    -- Send compensation to the user
     Send({
       Target = config.MINT_TOKEN,
       Action = 'Transfer',
       Recipient = operation.sender,
       Quantity = mintCompensation,
       ['X-IL-Compensation'] = 'true',
-      ['X-Token-Deficit'] = tokenDeficit,
+      ['X-Token-Deficit'] = ilAmount,
       ['X-Deficit-Insurance-For-Token'] = config.AllowedTokensNames[operation.token],
-      ['X-Operation-Id'] = operation.id
+      ['X-Operation-Id'] = operation.id,
+      ['X-Coverage-Percentage'] = coveragePercentage,
+      ['X-Staking-Duration-Days'] = tostring(math.floor((os.time() - initialStakeDate) / (24 * 60 * 60))),
+      ['X-Initial-Price-Ratio'] = initialPriceRatio or 'N/A',
+      ['X-Final-Price-Ratio'] = finalPriceRatio
     })
 
-    -- Record metrics for analytics
-    impermanent_loss.recordMetrics(operation.token, tokenDeficit, mintCompensation)
+    -- Record metrics and log the compensation
+    impermanent_loss.recordMetrics(operation.token, ilAmount, mintCompensation)
 
-    -- Log the IL compensation
     utils.logEvent('ILCompensation', {
+      formula = 'Enhanced IL Formula Applied',
       sender = operation.sender,
       token = operation.token,
       tokenName = config.AllowedTokensNames[operation.token],
       initialAmount = tokenData.initialUserTokenAmount,
       withdrawnAmount = tokenData.withdrawnUserToken,
-      tokenDeficit = tokenDeficit,
+      ilAmount = ilAmount,
       mintCompensation = mintCompensation,
+      coveragePercentage = coveragePercentage,
+      stakingDurationDays = math.floor((os.time() - initialStakeDate) / (24 * 60 * 60)),
+      initialPriceRatio = initialPriceRatio or 'Not available',
+      finalPriceRatio = finalPriceRatio,
       operationId = operation.id
     })
   end)
 
-  -- Return the token deficit for immediate reference
-  return tokenDeficit
+  -- Return token deficit for immediate reference
+  -- Actual compensation happens asynchronously
+  return impermanent_loss.calculateTokenDeficit(
+    tokenData.initialUserTokenAmount,
+    tokenData.withdrawnUserToken
+  )
 end
 
 -- Calculate estimated IL for a position without processing compensation
@@ -335,6 +411,48 @@ function impermanent_loss.getILHistory(token)
   end
 
   return ILMetrics[token].history
+end
+
+-- Calculate impermanent loss using the standard IL formula:
+-- IL_X = max(Deposited_X * (1 - sqrt(R_final / R_initial)), 0)
+-- Calculate impermanent loss using the standard IL formula:
+-- IL_X = max(Deposited_X * (1 - sqrt(R_final / R_initial)), 0)
+function impermanent_loss.calculateStandardIL(initialAmount, initialRatio, finalRatio)
+  -- Handle case where initial ratio is zero or not available
+  if utils.math.isZero(initialRatio) then
+    return '0'
+  end
+
+  -- Calculate price ratio change
+  local ratioChange = utils.math.divide(finalRatio, initialRatio)
+
+  -- Calculate square root of ratio change
+  local ratioChangeNum = tonumber(ratioChange)
+  if not ratioChangeNum or ratioChangeNum < 0 then
+    utils.logEvent('ILCalculationError', {
+      error = 'Invalid ratio change value for square root',
+      initialRatio = initialRatio,
+      finalRatio = finalRatio,
+      ratioChange = ratioChange
+    })
+    return '0' -- Return no IL if we can't calculate it properly
+  end
+
+  local sqrtRatioChange = math.sqrt(ratioChangeNum)
+
+  -- Calculate IL factor: (1 - sqrt(R_final / R_initial))
+  local ilFactor = 1 - sqrtRatioChange
+
+  -- If IL factor is negative or zero, there's no impermanent loss
+  if ilFactor <= 0 then
+    return '0'
+  end
+
+  -- Calculate IL amount with precision (multiply by 1000, then divide)
+  local ilAmount = utils.math.multiply(initialAmount, tostring(ilFactor * 1000))
+  ilAmount = utils.math.divide(ilAmount, '1000')
+
+  return ilAmount
 end
 
 return impermanent_loss

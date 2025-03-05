@@ -161,9 +161,45 @@ stake.handlers = {
       lpTokens = utils.math.add(
         state.getStakingPosition(operation.token, operation.sender).lpTokens,
         receivedLP),
-      mintAmount = msg.Tags['Provided-' .. config.MINT_TOKEN], -- Track MINT contribution
+      mintAmount = msg.Tags['Provided-' .. config.MINT_TOKEN],
       stakedDate = os.time()
     })
+
+    -- Record initial price ratio by querying AMM
+    Send({
+      Target = operation.amm,
+      Action = 'Get-Reserves'
+    }).onReply(function(reply)
+      local reserve1 = reply.Tags['Reserve-1']
+      local reserve2 = reply.Tags['Reserve-2']
+      local token1 = reply.Tags['Token-1']
+      local token2 = reply.Tags['Token-2']
+
+      -- Determine which reserve corresponds to which token
+      local mintReserve, tokenReserve
+      if token1 == config.MINT_TOKEN then
+        mintReserve = reserve1
+        tokenReserve = reserve2
+      else
+        mintReserve = reserve2
+        tokenReserve = reserve1
+      end
+
+      -- Calculate token/MINT price ratio
+      local tokenPerMint = utils.math.divide(tokenReserve, mintReserve)
+
+      -- Update staking position with initial price ratio
+      state.updateStakingPosition(operation.token, operation.sender, {
+        initialPriceRatio = tokenPerMint
+      })
+
+      utils.logEvent('InitialPriceRatioRecorded', {
+        token = operation.token,
+        tokenName = config.AllowedTokensNames[operation.token],
+        initialPriceRatio = tokenPerMint,
+        sender = operation.sender
+      })
+    end)
 
     -- Update pending operation with actual amounts used
     state.updatePendingOperation(operationId, {
