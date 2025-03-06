@@ -28,7 +28,12 @@ query.patterns = {
 
   getInsuranceInfo = function(msg)
     return msg.Tags.Action == 'Get-Insurance-Info'
-  end
+  end,
+
+  getProtocolMetrics = function(msg)
+    return msg.Tags.Action == 'Get-Protocol-Metrics'
+  end,
+
 }
 
 -- Handler implementations for query operations
@@ -236,6 +241,141 @@ query.handlers = {
       ['Max-Coverage-Percentage'] = config.IL_MAX_COVERAGE_PERCENTAGE .. '%',
       ['Max-Compensation'] = maxCompHuman .. ' MINT',
       ['Supported-Tokens'] = tostring(tokenCount)
+    })
+  end
+  ,
+
+  getProtocolMetrics = function(msg)
+    local metrics = {
+      contractVersion = config.VERSION,
+      isPaused = state.isPaused(),
+      timestamp = os.time(),
+      totalSupportedTokens = 0,
+      totalActiveUsers = 0,
+      totalStakingPositions = 0,
+      totalPendingOperations = state.countPendingOperations(),
+      tokenMetrics = {},
+      impermanentLossMetrics = {},
+    }
+
+    -- Track unique users across all tokens
+    local uniqueUsers = {}
+
+    -- Collect token-specific metrics
+    for token, tokenName in pairs(config.getAllowedTokensNames()) do
+      metrics.totalSupportedTokens = metrics.totalSupportedTokens + 1
+
+      -- Initialize token metrics
+      local tokenMetric = {
+        address = token,
+        name = tokenName,
+        totalStaked = '0',
+        activePositions = 0,
+        activeUsers = 0,
+        amm = config.TOKEN_AMM_MAPPINGS[token],
+        decimals = config.getDecimalsForToken(token)
+      }
+
+      -- Get all staking positions for this token
+      local stakingPositions = state.getStakingPositions()
+      if stakingPositions[token] then
+        for user, position in pairs(stakingPositions[token]) do
+          if position and utils.math.isPositive(position.amount) then
+            -- Count active positions
+            tokenMetric.activePositions = tokenMetric.activePositions + 1
+
+            -- Track unique users
+            if not uniqueUsers[user] then
+              uniqueUsers[user] = true
+              metrics.totalActiveUsers = metrics.totalActiveUsers + 1
+            end
+
+            -- Count active users per token
+            tokenMetric.activeUsers = tokenMetric.activeUsers + 1
+
+            -- Sum total staked amount
+            tokenMetric.totalStaked = utils.math.add(tokenMetric.totalStaked, position.amount)
+          end
+        end
+      end
+
+      -- Calculate human-readable total staked with proper decimal places
+      tokenMetric.formattedTotalStaked = utils.formatTokenQuantity(tokenMetric.totalStaked, token)
+
+      -- Store token metrics
+      metrics.tokenMetrics[token] = tokenMetric
+
+      -- Add total staking positions
+      metrics.totalStakingPositions = metrics.totalStakingPositions + tokenMetric.activePositions
+    end
+
+    -- Get impermanent loss metrics if available
+    local impermanentLossModule = require('impermanent_loss')
+    if impermanentLossModule and impermanentLossModule.getMetrics then
+      metrics.impermanentLossMetrics = impermanentLossModule.getMetrics()
+
+      -- If we have IL metrics, calculate some additional stats
+      if metrics.impermanentLossMetrics then
+        metrics.totalILOccurrences = 0
+        metrics.totalILCompensationAmount = '0'
+
+        for _, tokenMetrics in pairs(metrics.impermanentLossMetrics) do
+          if tokenMetrics.occurrences then
+            metrics.totalILOccurrences = metrics.totalILOccurrences + tokenMetrics.occurrences
+          end
+
+          if tokenMetrics.totalCompensation then
+            metrics.totalILCompensationAmount = utils.math.add(
+              metrics.totalILCompensationAmount,
+              tokenMetrics.totalCompensation
+            )
+          end
+        end
+
+        -- Format total IL compensation to be human-readable
+        metrics.formattedTotalILCompensation = utils.formatTokenQuantity(
+          metrics.totalILCompensationAmount,
+          config.MINT_TOKEN
+        )
+      end
+    end
+
+    -- Add protocol settings
+    metrics.protocolSettings = {
+      maxVestingDays = config.IL_MAX_VESTING_DAYS,
+      maxCoveragePercentage = config.IL_MAX_COVERAGE_PERCENTAGE .. '%',
+      slippageTolerance = config.SLIPPAGE_TOLERANCE .. '%',
+      protocolFeePercentage = config.PROTOCOL_FEE_PERCENTAGE .. '%',
+      userSharePercentage = config.USER_SHARE_PERCENTAGE .. '%'
+    }
+
+
+
+    -- Create JSON response
+    local responseData
+    local success, encodedData = pcall(json.encode, metrics)
+    if success then
+      responseData = encodedData
+    else
+      responseData = json.encode({
+        error = 'Failed to encode full metrics',
+        basic = {
+          totalStakingPositions = metrics.totalStakingPositions,
+          totalActiveUsers = metrics.totalActiveUsers,
+          totalSupportedTokens = metrics.totalSupportedTokens
+        }
+      })
+    end
+
+    -- Reply with metrics information
+    msg.reply({
+      Action = 'Protocol-Metrics',
+      Data = responseData,
+      ['Total-Tokens'] = tostring(metrics.totalSupportedTokens),
+      ['Total-Users'] = tostring(metrics.totalActiveUsers),
+      ['Total-Positions'] = tostring(metrics.totalStakingPositions),
+      ['Contract-Version'] = config.VERSION,
+      ['Timestamp'] = tostring(metrics.timestamp)
     })
   end
 }
