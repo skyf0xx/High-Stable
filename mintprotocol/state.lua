@@ -13,14 +13,14 @@ StakingPositions = StakingPositions or {}
 PendingOperations = PendingOperations or {}
 
 -- Initialize state variables
-function state.initialize()
+function state.updateAllowedTokens()
   -- Initialize staking positions for allowed tokens
   for token, _ in pairs(config.AllowedTokensNames) do
     StakingPositions[token] = StakingPositions[token] or {}
   end
 
   -- Log initialization status
-  print(config.Colors.GRAY .. '[State] Initialized state management' .. config.Colors.RESET)
+  print(config.Colors.GRAY .. '[State] Updated allowed tokens' .. config.Colors.RESET)
 end
 
 -- Accessor functions for reading state
