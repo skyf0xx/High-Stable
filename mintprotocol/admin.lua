@@ -69,7 +69,7 @@ admin.handlers = {
 
     -- Update token configurations using config module function
     config.updateAllowedTokens(tokenAddress, tokenName, ammAddress, decimalPlaces)
-
+    state.updateAllowedTokens()
     -- Initialize staking positions for the new token
     if not StakingPositions[tokenAddress] then
       StakingPositions[tokenAddress] = {}
