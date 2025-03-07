@@ -12,6 +12,7 @@ local query = require('mintprotocol.query')
 
 
 
+Handlers.once('initialize-state', admin.patterns.initState, admin.handlers.initState)
 Handlers.add('set-pause-state', admin.patterns.setPauseState, admin.handlers.setPauseState)
 Handlers.add('update-allowed-tokens', admin.patterns.updateAllowedTokens, admin.handlers.updateAllowedTokens)
 

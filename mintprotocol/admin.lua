@@ -11,18 +11,39 @@ local admin = {}
 -- Handler patterns for admin operations
 admin.patterns = {
   -- Pattern for setting pause state
-  setPauseState = function(msg)
-    return msg.Tags.Action == 'Set-Pause-State'
+  initState = function(msg)
+    return msg.Tags.Action == 'Initialize-State'
   end,
 
   -- Pattern for updating allowed tokens
   updateAllowedTokens = function(msg)
     return msg.Tags.Action == 'Update-Allowed-Tokens'
+  end,
+
+  setPauseState = function(msg)
+    return msg.Tags.Action == 'Set-Pause-State'
   end
 }
 
 -- Handler implementations for admin operations
 admin.handlers = {
+  -- Handler for setting contract pause state
+  initState = function(msg)
+    -- Verify the caller is authorized (contract owner)
+    security.assertIsAuthorized(msg.From)
+
+    state.updateAllowedTokens()
+
+    -- Log the pause state change event
+    utils.logEvent('Process State Initialized', {
+      caller = msg.From,
+    })
+
+    -- Reply to confirm the action
+    msg.reply({
+      Data = 'Process state initialized'
+    })
+  end,
   -- Handler for setting contract pause state
   setPauseState = function(msg)
     -- Verify the caller is authorized (contract owner)
