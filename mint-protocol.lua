@@ -3,7 +3,6 @@
 -- Add this at the beginning of mint-protocol.lua
 
 -- Import all modules
-local state = require('mintprotocol.state')
 local stake = require('mintprotocol.stake')
 local unstake = require('mintprotocol.unstake')
 local operations = require('mintprotocol.operations')
@@ -11,8 +10,6 @@ local admin = require('mintprotocol.admin')
 local query = require('mintprotocol.query')
 
 
--- Initialize contract state
-state.initialize()
 
 -- Register all handlers
 local function registerHandlers()
