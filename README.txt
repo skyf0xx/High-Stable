@@ -23,6 +23,7 @@ cron.caller.mint.policy.lua --> "Cron MINT Policy" (fzBx5uPGi2e_dBbBvwKlh6BbrTLy
 MINT
 mint.lua --> "MINT" (SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0)
 mint.policy.lua --> "MINT Policy" (KBOfQGUj-K1GNwfx1CeMSZxxcj5p837d-_6hTmkWF0k)
+mint-protocol.lua --> "MINT Protocol" (lNtrei6YLQiWS8cyFFHDrOBvRzICQPTvrjZBP8fz-ZI)
 
 OPERATIONS
 maintenance.lua --> "Maintenance" (SpkZWLmuKAQ3vIK_1ErUndUxA372HxPtB5ncxa2V9VM)
