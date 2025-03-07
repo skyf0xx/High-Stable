@@ -3,7 +3,7 @@
 
 local bint = require('.bint')(256)
 local json = require('json')
-local config = require('config')
+local config = require('mintprotocol.config')
 
 local utils = {}
 

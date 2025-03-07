@@ -1,10 +1,10 @@
 -- Single-Sided Staking Contract - Operations Module
 -- Handles tracking, cleanup, and management of pending operations
 
-local config = require('config')
-local state = require('state')
-local utils = require('utils')
-local security = require('security')
+local config = require('mintprotocol.config')
+local state = require('mintprotocol.state')
+local utils = require('mintprotocol.utils')
+local security = require('mintprotocol.security')
 
 local operations = {}
 

@@ -1,12 +1,12 @@
 -- Single-Sided Staking Contract - Unstake Module
 -- Handles all unstaking-related operations
 
-local config = require('config')
-local state = require('state')
-local utils = require('utils')
-local security = require('security')
-local impermanent_loss = require('impermanent_loss') -- Add this import
-local operations = require('operations')
+local config = require('mintprotocol.config')
+local state = require('mintprotocol.state')
+local utils = require('mintprotocol.utils')
+local security = require('mintprotocol.security')
+local impermanent_loss = require('mintprotocol.impermanent_loss') -- Add this import
+local operations = require('mintprotocol.operations')
 
 local unstake = {}
 

@@ -1,10 +1,10 @@
 -- Single-Sided Staking Contract - Query Module
 -- Handles all read-only query operations for retrieving contract state
 
-local config = require('config')
-local state = require('state')
-local utils = require('utils')
-local security = require('security')
+local config = require('mintprotocol.config')
+local state = require('mintprotocol.state')
+local utils = require('mintprotocol.utils')
+local security = require('mintprotocol.security')
 local json = require('json')
 
 local query = {}

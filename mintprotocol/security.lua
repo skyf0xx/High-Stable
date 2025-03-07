@@ -1,8 +1,8 @@
 -- Single-Sided Staking Contract - Security Module
 -- Contains security checks and validation functions
 
-local config = require('config')
-local state = require('state')
+local config = require('mintprotocol.config')
+local state = require('mintprotocol.state')
 local bint = require('.bint')(256)
 
 local security = {}

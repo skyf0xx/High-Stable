@@ -1,13 +1,14 @@
 -- Single-Sided Staking Contract - Main Entry Point
 -- This file imports all modules and registers handlers
+-- Add this at the beginning of mint-protocol.lua
 
 -- Import all modules
-local state = require('mint-protocol.state')
-local stake = require('mint-protocol.stake')
-local unstake = require('mint-protocol.unstake')
-local operations = require('mint-protocol.operations')
-local admin = require('mint-protocol.admin')
-local query = require('mint-protocol.query')
+local state = require('mintprotocol.state')
+local stake = require('mintprotocol.stake')
+local unstake = require('mintprotocol.unstake')
+local operations = require('mintprotocol.operations')
+local admin = require('mintprotocol.admin')
+local query = require('mintprotocol.query')
 
 
 -- Initialize contract state

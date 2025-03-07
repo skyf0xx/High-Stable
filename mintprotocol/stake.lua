@@ -1,11 +1,11 @@
 -- Single-Sided Staking Contract - Stake Module
 -- Handles all staking-related operations
 
-local config = require('config')
-local state = require('state')
-local utils = require('utils')
-local security = require('security')
-local operations = require('operations')
+local config = require('mintprotocol.config')
+local state = require('mintprotocol.state')
+local utils = require('mintprotocol.utils')
+local security = require('mintprotocol.security')
+local operations = require('mintprotocol.operations')
 
 
 local stake = {}

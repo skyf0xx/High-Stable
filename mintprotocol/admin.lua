@@ -1,10 +1,10 @@
 -- Single-Sided Staking Contract - Admin Module
 -- Handles administrative functions such as pause/unpause and token management
 
-local config = require('config')
-local state = require('state')
-local utils = require('utils')
-local security = require('security')
+local config = require('mintprotocol.config')
+local state = require('mintprotocol.state')
+local utils = require('mintprotocol.utils')
+local security = require('mintprotocol.security')
 
 local admin = {}
 

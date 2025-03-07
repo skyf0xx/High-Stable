@@ -1,10 +1,10 @@
 -- Single-Sided Staking Contract - Impermanent Loss Module
 -- Handles impermanent loss calculations and compensation
 
-local config = require('config')
-local utils = require('utils')
-local security = require('security')
-local state = require('state')
+local config = require('mintprotocol.config')
+local utils = require('mintprotocol.utils')
+local security = require('mintprotocol.security')
+local state = require('mintprotocol.state')
 
 local impermanent_loss = {}
 

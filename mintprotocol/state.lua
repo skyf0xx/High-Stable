@@ -2,7 +2,7 @@
 -- Manages all state variables and provides accessor functions
 
 local bint = require('.bint')(256)
-local config = require('config')
+local config = require('mintprotocol.config')
 
 local state = {}
 
