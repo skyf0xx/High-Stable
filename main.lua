@@ -2,12 +2,13 @@
 -- This file imports all modules and registers handlers
 
 -- Import all modules
-local state = require('state')
-local stake = require('stake')
-local unstake = require('unstake')
-local operations = require('operations')
-local admin = require('admin')
-local query = require('query')
+local state = require('mint-protocol.state')
+local stake = require('mint-protocol.stake')
+local unstake = require('mint-protocol.unstake')
+local operations = require('mint-protocol.operations')
+local admin = require('mint-protocol.admin')
+local query = require('mint-protocol.query')
+
 
 -- Initialize contract state
 state.initialize()
