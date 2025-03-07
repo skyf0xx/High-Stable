@@ -99,15 +99,15 @@ admin.handlers = {
 
 -- Function to check if a token is already configured
 function admin.isTokenConfigured(tokenAddress)
-  local allowedTokens = config.getAllowedTokensNames()
+  local allowedTokens = config.AllowedTokensNames
   return allowedTokens[tokenAddress] ~= nil
 end
 
 -- Function to get all configured tokens
 function admin.getConfiguredTokens()
   local tokens = {}
-  local allowedTokens = config.getAllowedTokensNames()
-  local ammMappings = config.getTokenAmmMappings()
+  local allowedTokens = config.AllowedTokensNames
+  local ammMappings = config.TOKEN_AMM_MAPPINGS
 
   for address, name in pairs(allowedTokens) do
     table.insert(tokens, {

@@ -262,7 +262,7 @@ query.handlers = {
     local uniqueUsers = {}
 
     -- Collect token-specific metrics
-    for token, tokenName in pairs(config.getAllowedTokensNames()) do
+    for token, tokenName in pairs(config.AllowedTokensNames) do
       metrics.totalSupportedTokens = metrics.totalSupportedTokens + 1
 
       -- Initialize token metrics

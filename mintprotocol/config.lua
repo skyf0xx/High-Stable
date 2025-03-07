@@ -47,20 +47,6 @@ config.IL_MAX_COMP_PER_USER = tostring(MINT_MAX_COMP * 10 ^ MINT_DECIMALS)
 
 
 
--- Reference global state for allowed tokens configuration
--- This ensures the config module always reflects current state
-config.getAllowedTokensNames = function()
-  return config.AllowedTokensNames or {}
-end
-
-config.getTokenAmmMappings = function()
-  return config.TOKEN_AMM_MAPPINGS or {}
-end
-
-config.getTokenDecimals = function()
-  return config.TOKEN_DECIMALS or {}
-end
-
 -- Direct access to standard config values
 config.OPERATION_TIMEOUT = 3600000 -- 1 hour timeout in miliseconds
 
