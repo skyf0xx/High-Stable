@@ -10,69 +10,10 @@ local operations = require('mintprotocol.operations')
 
 local unstake = {}
 
--- Handler patterns for unstaking operations
 unstake.patterns = {
   -- Pattern for initial unstake request
-
   unstake = function(msg)
-    security.assertNotPaused()
-
-    local token = msg.Tags['Token']
-    local sender = msg.From
-
-    -- Validate token and staking position
-    security.assertTokenAllowed(token)
-    security.assertStakingPositionExists(token, sender)
-    security.assertStakingPositionHasTokens(token, sender)
-
-    -- Get the corresponding AMM for this token
-    local amm = security.getAmmForToken(token)
-
-    local position = state.getStakingPosition(token, sender)
-
-
-
-    -- Store the position values before clearing
-    local positionAmount = position and position.amount or '0'
-    local positionLpTokens = position and position.lpTokens or '0'
-    local positionMintAmount = position and position.mintAmount or '0'
-
-    -- Clear staking position (checks-effects-interactions pattern)
-    state.clearStakingPosition(token, sender)
-
-    local additionalFields = {
-      lpTokens = positionLpTokens,
-      mintAmount = positionMintAmount
-    }
-    local opId, operation = operations.createOperation('unstake', token, sender, positionAmount, amm, additionalFields)
-
-    -- Log unstake initiated
-    utils.logEvent('UnstakeInitiated', {
-      sender = sender,
-      token = token,
-      tokenName = config.AllowedTokensNames[token],
-      amount = position and position.amount or '0',
-      lpTokens = position and position.lpTokens or '0',
-      operationId = opId
-    })
-
-    -- Remove liquidity from AMM by burning LP tokens
-    Send({
-      Target = amm,
-      Action = 'Burn',
-      Quantity = positionLpTokens,
-      ['X-Operation-Id'] = opId,
-    })
-
-    -- Send confirmation to user
-    Send({
-      Target = sender,
-      Action = 'Unstake-Started',
-      Token = token,
-      TokenName = config.AllowedTokensNames[token],
-      Amount = positionAmount,
-      ['Operation-Id'] = opId
-    })
+    return msg.Tags.Action == 'Unstake' and msg.Tags['Token'] ~= nil
   end,
 
   -- Pattern for AMM burn confirmation
