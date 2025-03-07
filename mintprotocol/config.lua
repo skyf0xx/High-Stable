@@ -81,11 +81,6 @@ config.Colors = {
 
 -- Functions to update config values (for use by admin module)
 config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress, decimals)
-  -- Update global state
-  config.AllowedTokensNames = config.AllowedTokensNames or {}
-  config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {}
-  config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {}
-
   config.AllowedTokensNames[tokenAddress] = tokenName
   config.TOKEN_AMM_MAPPINGS[tokenAddress] = ammAddress
 
