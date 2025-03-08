@@ -39,6 +39,3 @@ Handlers.add('refund-unused', stake.patterns.refundUnused, stake.handlers.refund
 
 -- Maintenance handlers
 Handlers.add('cleanup-stale-operations', operations.patterns.cleanup, operations.handlers.cleanup)
-
--- Log contract initialization
-print(Colors.blue .. 'Single-Sided Staking Contract Updated' .. Colors.reset)
