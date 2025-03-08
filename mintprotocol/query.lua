@@ -88,10 +88,6 @@ query.handlers = {
   -- Handler for getting all positions for a user
   getAllPositions = function(msg)
     local user = msg.Tags['User'] or msg.From
-
-    -- Verify user has permission to access the requested positions
-    security.assertUserCanAccessPosition(user, msg.From)
-
     local positions = {}
 
     -- Gather all staking positions for the user across all tokens
