@@ -18,7 +18,6 @@ Handlers.add('update-allowed-tokens', admin.patterns.updateAllowedTokens, admin.
 
 -- Staking handlers
 Handlers.add('stake', stake.patterns.stake, stake.handlers.stake)
-Handlers.add('fund-stake', stake.patterns.fundStake, stake.handlers.fundStake)
 Handlers.add('provide-confirmation', stake.patterns.provideConfirmation, stake.handlers.provideConfirmation)
 
 -- Unstaking handlers

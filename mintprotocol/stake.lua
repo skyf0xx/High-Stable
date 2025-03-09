@@ -10,6 +10,33 @@ local operations = require('mintprotocol.operations')
 
 local stake = {}
 
+local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
+  -- Verify operation exists and is in pending state
+  security.verifyOperation(opId, 'stake', 'pending')
+
+  -- After receiving MINT tokens, transfer them to the AMM as the second token
+  Send({
+    Target = config.MINT_TOKEN,
+    Action = 'Transfer',
+    Recipient = amm,
+    Quantity = adjustedMintAmount,
+    ['X-Action'] = 'Provide',
+    ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+    ['X-Operation-Id'] = opId
+  })
+
+  -- Transfer the user's token to the AMM
+  Send({
+    Target = token,
+    Action = 'Transfer',
+    Recipient = amm,
+    Quantity = quantity,
+    ['X-Action'] = 'Provide',
+    ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+    ['X-Operation-Id'] = opId
+  })
+end
+
 -- Handler patterns for staking operations
 stake.patterns = {
   -- Pattern for initial stake request
@@ -17,12 +44,7 @@ stake.patterns = {
     return msg.Tags.Action == 'Credit-Notice' and msg.Tags['X-User-Request'] == 'Stake'
   end,
 
-  -- Pattern for funding a stake with MINT tokens
-  fundStake = function(msg)
-    return msg.Tags.Action == 'Credit-Notice' and
-      msg.Tags['X-User-Request'] == 'Fund-Stake' and
-      msg.From == config.MINT_TOKEN
-  end,
+
 
   -- Pattern for AMM providing confirmation of liquidity provision
   provideConfirmation = function(msg)
@@ -88,56 +110,8 @@ stake.handlers = {
       -- Apply excess multiplier to ensure all user tokens are used
       local adjustedMintAmount = utils.calculateAdjustedMintAmount(mintAmount)
 
-      -- Request MINT tokens from protocol treasury and transfer to the AMM
-      Send({
-        Target = config.MINT_TOKEN,
-        Action = 'Transfer',
-        Recipient = ao.id,
-        Quantity = adjustedMintAmount,
-        ['X-Operation-Id'] = opId,
-        ['X-User-Request'] = 'Fund-Stake',
-        ['X-Token'] = token,
-        ['X-Amount'] = quantity,
-        ['X-AMM'] = amm,
-        ['X-Adjusted-Mint-Amount'] = adjustedMintAmount
-      })
+      fundStake(opId, token, quantity, amm, adjustedMintAmount)
     end)
-  end,
-
-  -- Handler for funding a stake with MINT tokens
-  fundStake = function(msg)
-    security.assertNotPaused()
-
-    local opId = msg.Tags['X-Operation-Id']
-    local token = msg.Tags['X-Token']
-    local quantity = msg.Tags['X-Amount']
-    local amm = msg.Tags['X-AMM']
-    local adjustedMintAmount = msg.Tags['X-Adjusted-Mint-Amount']
-
-    -- Verify operation exists and is in pending state
-    security.verifyOperation(opId, 'stake', 'pending')
-
-    -- After receiving MINT tokens, transfer them to the AMM as the second token
-    Send({
-      Target = config.MINT_TOKEN,
-      Action = 'Transfer',
-      Recipient = amm,
-      Quantity = adjustedMintAmount,
-      ['X-Action'] = 'Provide',
-      ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
-      ['X-Operation-Id'] = opId
-    })
-
-    -- Transfer the user's token to the AMM
-    Send({
-      Target = token,
-      Action = 'Transfer',
-      Recipient = amm,
-      Quantity = quantity,
-      ['X-Action'] = 'Provide',
-      ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
-      ['X-Operation-Id'] = opId
-    })
   end,
 
   -- Handler for AMM providing confirmation of liquidity provision
