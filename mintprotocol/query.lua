@@ -343,47 +343,32 @@ query.handlers = {
       userSharePercentage = config.USER_SHARE_PERCENTAGE .. '%'
     }
 
-    -- Query treasury balance (Add this section)
-    Send({
-      Target = config.MINT_TOKEN,
-      Action = 'Balance',
-    }).onReply(function(reply)
-      -- Extract the balance from the reply
-      local treasuryBalance = reply.Data or '0'
-
-      -- Add treasury balance to metrics
-      metrics.treasuryBalance = treasuryBalance
-      metrics.formattedTreasuryBalance = utils.formatTokenQuantity(treasuryBalance, config.MINT_TOKEN)
-
-      -- Create JSON response
-      local responseData
-      local success, encodedData = pcall(json.encode, metrics)
-      if success then
-        responseData = encodedData
-      else
-        responseData = json.encode({
-          error = 'Failed to encode full metrics',
-          basic = {
-            totalStakingPositions = metrics.totalStakingPositions,
-            totalActiveUsers = metrics.totalActiveUsers,
-            totalSupportedTokens = metrics.totalSupportedTokens,
-            treasuryBalance = treasuryBalance
-          }
-        })
-      end
-
-      -- Reply with metrics information
-      msg.reply({
-        Action = 'Protocol-Metrics',
-        Data = responseData,
-        ['Total-Tokens'] = tostring(metrics.totalSupportedTokens),
-        ['Total-Users'] = tostring(metrics.totalActiveUsers),
-        ['Total-Positions'] = tostring(metrics.totalStakingPositions),
-        ['Treasury-Balance'] = treasuryBalance,
-        ['Contract-Version'] = config.VERSION,
-        ['Timestamp'] = tostring(metrics.timestamp)
+    -- Create JSON response
+    local responseData
+    local success, encodedData = pcall(json.encode, metrics)
+    if success then
+      responseData = encodedData
+    else
+      responseData = json.encode({
+        error = 'Failed to encode full metrics',
+        basic = {
+          totalStakingPositions = metrics.totalStakingPositions,
+          totalActiveUsers = metrics.totalActiveUsers,
+          totalSupportedTokens = metrics.totalSupportedTokens
+        }
       })
-    end)
+    end
+
+    -- Reply with metrics information directly without treasury balance
+    msg.reply({
+      Action = 'Protocol-Metrics',
+      Data = responseData,
+      ['Total-Tokens'] = tostring(metrics.totalSupportedTokens),
+      ['Total-Users'] = tostring(metrics.totalActiveUsers),
+      ['Total-Positions'] = tostring(metrics.totalStakingPositions),
+      ['Contract-Version'] = config.VERSION,
+      ['Timestamp'] = tostring(metrics.timestamp)
+    })
   end
 }
 
