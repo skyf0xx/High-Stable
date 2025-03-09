@@ -5,7 +5,7 @@ local config = require('mintprotocol.config')
 local state = require('mintprotocol.state')
 local utils = require('mintprotocol.utils')
 local security = require('mintprotocol.security')
-local impermanent_loss = require('mintprotocol.impermanent_loss') -- Add this import
+local impermanent_loss = require('mintprotocol.impermanent_loss')
 local operations = require('mintprotocol.operations')
 
 local unstake = {}
