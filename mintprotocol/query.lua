@@ -6,6 +6,7 @@ local state = require('mintprotocol.state')
 local utils = require('mintprotocol.utils')
 local security = require('mintprotocol.security')
 local json = require('json')
+local impermanent_loss = require('mintprotocol.impermanent_loss')
 
 local query = {}
 
@@ -305,35 +306,32 @@ query.handlers = {
       metrics.totalStakingPositions = metrics.totalStakingPositions + tokenMetric.activePositions
     end
 
-    -- Get impermanent loss metrics if available
-    local impermanentLossModule = require('impermanent_loss')
-    if impermanentLossModule and impermanentLossModule.getMetrics then
-      metrics.impermanentLossMetrics = impermanentLossModule.getMetrics()
 
-      -- If we have IL metrics, calculate some additional stats
-      if metrics.impermanentLossMetrics then
-        metrics.totalILOccurrences = 0
-        metrics.totalILCompensationAmount = '0'
+    metrics.impermanentLossMetrics = impermanent_loss.getMetrics()
 
-        for _, tokenMetrics in pairs(metrics.impermanentLossMetrics) do
-          if tokenMetrics.occurrences then
-            metrics.totalILOccurrences = metrics.totalILOccurrences + tokenMetrics.occurrences
-          end
+    -- If we have IL metrics, calculate some additional stats
+    if metrics.impermanentLossMetrics then
+      metrics.totalILOccurrences = 0
+      metrics.totalILCompensationAmount = '0'
 
-          if tokenMetrics.totalCompensation then
-            metrics.totalILCompensationAmount = utils.math.add(
-              metrics.totalILCompensationAmount,
-              tokenMetrics.totalCompensation
-            )
-          end
+      for _, tokenMetrics in pairs(metrics.impermanentLossMetrics) do
+        if tokenMetrics.occurrences then
+          metrics.totalILOccurrences = metrics.totalILOccurrences + tokenMetrics.occurrences
         end
 
-        -- Format total IL compensation to be human-readable
-        metrics.formattedTotalILCompensation = utils.formatTokenQuantity(
-          metrics.totalILCompensationAmount,
-          config.MINT_TOKEN
-        )
+        if tokenMetrics.totalCompensation then
+          metrics.totalILCompensationAmount = utils.math.add(
+            metrics.totalILCompensationAmount,
+            tokenMetrics.totalCompensation
+          )
+        end
       end
+
+      -- Format total IL compensation to be human-readable
+      metrics.formattedTotalILCompensation = utils.formatTokenQuantity(
+        metrics.totalILCompensationAmount,
+        config.MINT_TOKEN
+      )
     end
 
     -- Add protocol settings
