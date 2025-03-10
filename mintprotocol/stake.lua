@@ -251,16 +251,8 @@ stake.handlers = {
     -- Verify the quantity is valid
     security.assertPositiveQuantity(quantity)
 
-    -- If token is MINT, refund to treasury
+    -- If token is MINT allow to stay in our treasury
     if token == config.MINT_TOKEN then
-      Send({
-        Target = token,
-        Action = 'Transfer',
-        Recipient = config.MINT_TOKEN,
-        Quantity = quantity,
-        ['X-Operation-Id'] = operationId,
-        ['X-reason'] = 'Refund excess'
-      })
       return
     end
 
