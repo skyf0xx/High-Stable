@@ -62,6 +62,7 @@ stake.patterns = {
     return msg.Tags.Action == 'Credit-Notice' and
       msg.Tags['X-User-Request'] ~= 'Stake' and
       msg.Tags['X-User-Request'] ~= 'Fund-Stake' and
+      msg.Tags['X-Reason'] ~= 'Treasury-Fund' and
       msg.Tags['X-Refund-Reason'] == nil
   end
 }
