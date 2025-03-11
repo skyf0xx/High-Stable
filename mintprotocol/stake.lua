@@ -14,7 +14,7 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
   -- Verify operation exists and is in pending state
   security.verifyOperation(opId, 'stake', 'pending')
 
-  -- After receiving MINT tokens, transfer them to the AMM as the second token
+  -- Transfer MINT to the AMM from our treasury
   Send({
     Target = config.MINT_TOKEN,
     Action = 'Transfer',
