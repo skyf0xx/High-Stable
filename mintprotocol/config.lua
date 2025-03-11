@@ -55,7 +55,7 @@ config.EXCESS_MULTIPLIER = '1090' -- 109.0% - to ensure all user tokens are used
 config.EXCESS_DIVISOR = '1000'
 
 -- AMM slippage tolerance
-config.SLIPPAGE_TOLERANCE = '0.5' -- 0.5% slippage tolerance for AMM operations
+config.SLIPPAGE_TOLERANCE = '20'
 
 -- Impermanent loss protection settings
 config.IL_COMPENSATION_MARGIN = '110' -- 110% (10% safety margin for IL compensation)
