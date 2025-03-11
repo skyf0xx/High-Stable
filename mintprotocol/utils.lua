@@ -142,10 +142,17 @@ end
 
 -- Apply excess multiplier to ensure enough MINT tokens for swapping
 utils.calculateAdjustedMintAmount = function(mintAmount)
-  return utils.math.divide(
+  local adjustedAmount = utils.math.divide(
     utils.math.multiply(mintAmount, config.EXCESS_MULTIPLIER),
     config.EXCESS_DIVISOR
   )
+
+  -- Ensure the result is at least 1
+  if utils.math.isLessThan(adjustedAmount, '1') then
+    return '1'
+  else
+    return adjustedAmount
+  end
 end
 
 -- Format message for Send function to improve readability
