@@ -63,8 +63,8 @@ query.handlers = {
     -- Calculate time staked if available
     local timeStaked = ''
     if position.stakedDate then
-      local elapsedSeconds = utils.timeElapsedSince(position.stakedDate)
-      timeStaked = utils.formatDuration(elapsedSeconds)
+      local elapsedMilliSeconds = utils.timeElapsedSince(position.stakedDate)
+      timeStaked = utils.formatDuration(elapsedMilliSeconds)
     end
 
     -- Format amounts for better readability

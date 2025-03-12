@@ -70,9 +70,15 @@ utils.logEvent = function(eventType, details)
 end
 
 -- Helper function to format token quantities for display
-utils.formatTokenQuantity = function(quantity, token)
+utils.formatTokenQuantity = function(quantity, token, isLPToken)
   -- Get the correct number of decimals for this token
-  local decimals = config.getDecimalsForToken(token)
+  local decimals
+
+  if isLPToken then
+    decimals = config.getDecimalsForLP(token)
+  else
+    decimals = config.getDecimalsForToken(token)
+  end
 
   -- Convert to string to ensure consistent handling
   local quantityStr = tostring(quantity)
@@ -108,13 +114,20 @@ utils.timeElapsedSince = function(timestamp)
 end
 
 -- Format duration in seconds to human-readable format
-utils.formatDuration = function(seconds)
-  local days = math.floor(seconds / 86400)
-  seconds = seconds % 86400
-  local hours = math.floor(seconds / 3600)
-  seconds = seconds % 3600
-  local minutes = math.floor(seconds / 60)
-  seconds = seconds % 60
+utils.formatDuration = function(milliseconds)
+  local totalSeconds = math.floor(milliseconds / 1000)
+  local ms = milliseconds % 1000
+
+  local days = math.floor(totalSeconds / 86400)
+  totalSeconds = totalSeconds % 86400
+
+  local hours = math.floor(totalSeconds / 3600)
+  totalSeconds = totalSeconds % 3600
+
+  local minutes = math.floor(totalSeconds / 60)
+  totalSeconds = totalSeconds % 60
+
+  local seconds = totalSeconds
 
   local result = ''
   if days > 0 then
@@ -126,7 +139,15 @@ utils.formatDuration = function(seconds)
   if minutes > 0 or hours > 0 or days > 0 then
     result = result .. minutes .. 'm '
   end
-  result = result .. seconds .. 's'
+
+  result = result .. seconds
+
+  -- Add milliseconds part with decimal point
+  if ms > 0 then
+    result = result .. '.' .. string.format('%03d', ms)
+  end
+
+  result = result .. 's'
 
   return result
 end

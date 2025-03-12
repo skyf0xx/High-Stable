@@ -22,7 +22,7 @@ end
 -- Calculate compensation amount based on staking duration and other factors
 function impermanent_loss.calculateCompensationAmount(ilAmount, finalPriceRatio, initialStakeDate)
   -- Calculate staking duration in days
-  local stakingDurationSeconds = os.time() - initialStakeDate
+  local stakingDurationSeconds = (os.time() - initialStakeDate) / 1000
   local stakingDurationDays = stakingDurationSeconds / (24 * 60 * 60)
 
   -- Calculate coverage percentage based on vesting
