@@ -23,6 +23,16 @@ config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'oudDA-JUZi14kbKFIhu4X34qGYHbtZnHdtYWEqbtkO0', -- MINT/ USDC AMM -
 }
 
+
+config.LP_DECIMALS = config.LP_DECIMALS or {
+  ['Ruw6Q5gVgZ-isWhRGW4LVvTu6rMost-J5SKsF4rF-rA'] = 12,
+  ['cmZi84AA3f717pna0ck-gM93wq1j1exRdNLdt7saG9o'] = 12,
+  ['Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI'] = 12,
+  ['DMB9l4HSp-9qBvXtxDqDTnZZ3qFNCwJgivwSv0XEgN0'] = 12,
+  ['oudDA-JUZi14kbKFIhu4X34qGYHbtZnHdtYWEqbtkO0'] = 12,
+}
+
+
 -- Token decimals mapping - defines how many decimal places each token uses
 config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
   -- MINT token decimal places
@@ -35,6 +45,7 @@ config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 12, -- AO (12 decimals)
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 6,  -- USDC (6 decimals)
 }
+
 
 -- Impermanent loss protection parameters
 config.IL_MAX_VESTING_DAYS = 30          -- T_max: full vesting period in days
@@ -80,10 +91,10 @@ config.Colors = {
 
 
 -- Functions to update config values (for use by admin module)
-config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress, decimals)
+config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress, decimals, lpDecimals)
   config.AllowedTokensNames[tokenAddress] = tokenName
   config.TOKEN_AMM_MAPPINGS[tokenAddress] = ammAddress
-
+  config.LP_DECIMALS[ammAddress] = lpDecimals
   config.TOKEN_DECIMALS[tokenAddress] = decimals
 
   return true
@@ -95,8 +106,13 @@ config.getDecimalsForToken = function(tokenAddress)
   if decimals then
     return decimals
   end
-  -- Default to 6 if not specified (common for many tokens)
-  return 6
+end
+
+config.getDecimalsForLP = function(tokenAddress)
+  local decimals = config.LP_DECIMALS[tokenAddress]
+  if decimals then
+    return decimals
+  end
 end
 
 return config

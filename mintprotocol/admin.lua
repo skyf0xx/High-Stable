@@ -79,6 +79,8 @@ admin.handlers = {
     local tokenName = msg.Tags['Token-Name']
     local ammAddress = msg.Tags['AMM-Address']
     local decimals = msg.Tags['Token-Decimals']
+    local lpDecimals = msg.Tags['LP-Decimals']
+
 
     -- Validate required information is present
     assert(tokenAddress and tokenName and ammAddress and decimals, 'Missing token information')
@@ -89,7 +91,7 @@ admin.handlers = {
 
 
     -- Update token configurations using config module function
-    config.updateAllowedTokens(tokenAddress, tokenName, ammAddress, decimalPlaces)
+    config.updateAllowedTokens(tokenAddress, tokenName, ammAddress, decimalPlaces, lpDecimals)
     state.updateAllowedTokens()
     -- Initialize staking positions for the new token
     if not StakingPositions[tokenAddress] then

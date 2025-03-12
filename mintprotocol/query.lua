@@ -68,8 +68,8 @@ query.handlers = {
     end
 
     -- Format amounts for better readability
-    local formattedAmount = utils.formatTokenQuantity(position.amount)
-    local formattedLpTokens = utils.formatTokenQuantity(position.lpTokens)
+    local formattedAmount = utils.formatTokenQuantity(position.amount, token, false)
+    local formattedLpTokens = utils.formatTokenQuantity(position.lpTokens, amm, true)
 
     -- Reply with position information
     msg.reply({
@@ -105,8 +105,8 @@ query.handlers = {
         end
 
         -- Format amounts for better readability
-        local formattedAmount = utils.formatTokenQuantity(position.amount)
-        local formattedLpTokens = utils.formatTokenQuantity(position.lpTokens)
+        local formattedAmount = utils.formatTokenQuantity(position.amount, token, false)
+        local formattedLpTokens = utils.formatTokenQuantity(position.lpTokens, amm, true)
 
         -- Add position to results
         positions[token] = {
@@ -297,7 +297,7 @@ query.handlers = {
       end
 
       -- Calculate human-readable total staked with proper decimal places
-      tokenMetric.formattedTotalStaked = utils.formatTokenQuantity(tokenMetric.totalStaked, token)
+      tokenMetric.formattedTotalStaked = utils.formatTokenQuantity(tokenMetric.totalStaked, token, false)
 
       -- Store token metrics
       metrics.tokenMetrics[token] = tokenMetric
@@ -330,7 +330,8 @@ query.handlers = {
       -- Format total IL compensation to be human-readable
       metrics.formattedTotalILCompensation = utils.formatTokenQuantity(
         metrics.totalILCompensationAmount,
-        config.MINT_TOKEN
+        config.MINT_TOKEN,
+        false
       )
     end
 
