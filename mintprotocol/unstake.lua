@@ -18,8 +18,19 @@ unstake.patterns = {
 
   -- Pattern for AMM burn confirmation
   burnConfirmation = function(msg)
-    return msg.Tags.Action == 'Burn-Confirmation'
+    if msg.Tags.Action == 'Burn-Confirmation' then
+      return true
+    end
+
+    return msg.Tags.Action == 'Credit-Notice' and
+      msg.Tags['X-Action'] == 'Burn-LP-Output' and
+      config.LP_DECIMALS[msg.From] == nil and --filter out LP tokens sent to us
+      msg.From ~= config.MINT_TOKEN           --filter out MINT we only want the users' token
   end
+
+
+
+
 }
 
 -- Helper function to validate burn operation
