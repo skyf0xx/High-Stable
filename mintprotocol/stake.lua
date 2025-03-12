@@ -59,11 +59,16 @@ stake.patterns = {
 
   -- Pattern for handling unused tokens (refunds)
   refundUnused = function(msg)
+    if config.LP_DECIMALS[msg.From] ~= nil then
+      return false --this is LP being sent to us so we keep it
+    end
+
     return msg.Tags.Action == 'Credit-Notice' and
       msg.Tags['X-User-Request'] ~= 'Stake' and
       msg.Tags['X-User-Request'] ~= 'Fund-Stake' and
       msg.Tags['X-Reason'] ~= 'Treasury-Fund' and
-      msg.Tags['X-Refund-Reason'] == nil
+      msg.Tags['X-Refund-Reason'] == nil and
+      msg.Tags['X-Action'] ~= 'Burn-LP-Output' --not from a burn (unstake) refund
   end
 }
 
