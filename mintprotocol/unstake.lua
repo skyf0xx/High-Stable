@@ -16,49 +16,20 @@ unstake.patterns = {
     return msg.Tags.Action == 'Unstake' and msg.Tags['Token'] ~= nil
   end,
 
-  -- Pattern for AMM burn confirmation
-  burnConfirmation = function(msg)
-    if msg.Tags.Action == 'Burn-Confirmation' then
-      return true
-    end
+  -- Pattern for burn information message
+  burnInfo = function(msg)
+    return msg.Tags.Action == 'Burn-Confirmation'
+  end,
 
+  -- Pattern for token receipt
+  tokenReceipt = function(msg)
     return msg.Tags.Action == 'Credit-Notice' and
       msg.Tags['X-Action'] == 'Burn-LP-Output' and
-      config.LP_DECIMALS[msg.From] == nil and --filter out LP tokens sent to us
-      msg.From ~= config.MINT_TOKEN           --filter out MINT we only want the users' token
+      config.LP_DECIMALS[msg.From] == nil and -- filter out LP tokens sent to us
+      msg.From ~= config.MINT_TOKEN           -- filter out MINT, we only want the user's token
   end
-
-
-
-
 }
 
--- Helper function to validate burn operation
-local function validateBurnOperation(msg)
-  security.assertNotPaused()
-
-  local operationId = msg.Tags['X-Operation-Id']
-  local operation = security.verifyOperation(operationId, 'unstake', 'pending')
-  security.assertIsValidAmm(msg.From, operation.amm)
-
-  return operation
-end
-
--- Helper function to extract token amounts from burn confirmation
-local function extractTokenAmounts(msg, operation)
-  local usersToken = utils.getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
-
-  return {
-    withdrawnUserToken = msg.Tags['Withdrawn-' .. usersToken],
-    withdrawnMintToken = msg.Tags['Withdrawn-' .. config.MINT_TOKEN],
-    initialUserTokenAmount = operation.amount,
-    initialMintTokenAmount = operation.mintAmount,
-    burnedLpTokens = msg.Tags['Burned-Pool-Tokens'],
-    usersToken = usersToken
-  }
-end
-
--- REMOVED: handleImpermanentLoss function is now replaced with the call to impermanent_loss.processCompensation
 
 -- Helper function to handle user token profit sharing
 local function handleUserTokenProfitSharing(tokenData, operation)
@@ -229,6 +200,50 @@ local function sendTokensAndNotify(operation, tokenData, results)
   })
 end
 
+local function processUnstake(operationId)
+  local operation = operations.get(operationId)
+  -- Extract token data from stored operation information
+  local usersToken = utils.getUsersToken(operation.burnInfo.tokenA, operation.burnInfo.tokenB)
+  local tokenData = {
+    withdrawnUserToken = (operation.burnInfo.withdrawnTokenA == usersToken) and operation.burnInfo.withdrawnTokenA or
+      operation.burnInfo.withdrawnTokenB,
+    withdrawnMintToken = (operation.burnInfo.withdrawnTokenA == config.MINT_TOKEN) and operation.burnInfo
+                                                                                                .withdrawnTokenA or
+      operation.burnInfo.withdrawnTokenB,
+    initialUserTokenAmount = operation.amount,
+    initialMintTokenAmount = operation.mintAmount,
+    burnedLpTokens = operation.burnInfo.burnedPoolTokens,
+    usersToken = usersToken
+  }
+  -- Mark operation as completed (checks-effects-interactions)
+  operations.complete(operationId)
+  -- Process impermanent loss and profit sharing
+  local ilCompensation = impermanent_loss.processCompensation(tokenData, operation)
+  local userTokenResults = handleUserTokenProfitSharing(tokenData, operation)
+  local mintProfitShare = handleMintTokenProfitSharing(tokenData, operation)
+  -- Send tokens and notify user
+  local results = {
+    amountToSendUser = userTokenResults.amountToSendUser,
+    ilCompensation = ilCompensation,
+    feeShareAmount = userTokenResults.feeShareAmount,
+    mintProfitShare = mintProfitShare
+  }
+  sendTokensAndNotify(operation, tokenData, results)
+  -- Log unstake completed
+  utils.logEvent('UnstakeComplete', {
+    sender = operation.sender,
+    token = operation.token,
+    tokenName = config.AllowedTokensNames[operation.token],
+    initialAmount = tokenData.initialUserTokenAmount,
+    withdrawnAmount = tokenData.withdrawnUserToken,
+    lpTokensBurned = tokenData.burnedLpTokens,
+    ilCompensation = ilCompensation,
+    userTokenProfit = userTokenResults.userTokenProfit,
+    mintProfitShare = mintProfitShare,
+    operationId = operation.id
+  })
+end
+
 -- Handler implementations for unstaking operations
 unstake.handlers = {
   -- Handler for initial unstake request
@@ -300,50 +315,57 @@ unstake.handlers = {
     })
   end,
 
-  -- Handler for AMM burn confirmation
-  -- Handler for AMM burn confirmation
-  burnConfirmation = function(msg)
-    -- Step 1: Validate the operation
-    local operation = validateBurnOperation(msg)
+  -- Handler for burn information
+  burnInfo = function(msg)
+    security.assertNotPaused()
 
-    -- Step 2: Extract token amounts
-    local tokenData = extractTokenAmounts(msg, operation)
+    local operationId = msg.Tags['X-Operation-Id']
+    local operation = security.verifyOperation(operationId, 'unstake', 'pending')
+    security.assertIsValidAmm(msg.From, operation.amm)
 
-    -- Step 3: Mark operation as completed (checks-effects-interactions)
-    operations.complete(msg.Tags['X-Operation-Id'])
-
-    -- Step 4: Process impermanent loss and profit sharing
-    -- Use the impermanent_loss module to handle IL compensation
-    local ilCompensation = impermanent_loss.processCompensation(tokenData, operation)
-
-    local userTokenResults = handleUserTokenProfitSharing(tokenData, operation)
-
-    local mintProfitShare = handleMintTokenProfitSharing(tokenData, operation)
-
-    -- Step 5: Send tokens and notify user
-    local results = {
-      amountToSendUser = userTokenResults.amountToSendUser,
-      ilCompensation = ilCompensation,
-      feeShareAmount = userTokenResults.feeShareAmount,
-      mintProfitShare = mintProfitShare
-    }
-
-    sendTokensAndNotify(operation, tokenData, results)
-
-    -- Log unstake completed
-    utils.logEvent('UnstakeComplete', {
-      sender = operation.sender,
-      token = operation.token,
-      tokenName = config.AllowedTokensNames[operation.token],
-      initialAmount = tokenData.initialUserTokenAmount,
-      withdrawnAmount = tokenData.withdrawnUserToken,
-      lpTokensBurned = tokenData.burnedLpTokens,
-      ilCompensation = ilCompensation,
-      userTokenProfit = userTokenResults.userTokenProfit,
-      mintProfitShare = mintProfitShare,
-      operationId = operation.id
+    -- Store burn information in the operation
+    state.updatePendingOperation(operationId, {
+      burnInfo = {
+        received = true,
+        burnedPoolTokens = msg.Tags['Burned-Pool-Tokens'],
+        tokenA = msg.Tags['Token-A'],
+        tokenB = msg.Tags['Token-B'],
+        withdrawnTokenA = msg.Tags['Withdrawn-' .. msg.Tags['Token-A']],
+        withdrawnTokenB = msg.Tags['Withdrawn-' .. msg.Tags['Token-B']]
+      }
     })
+
+    -- Check if tokens have already been received and process if so
+    if operation.tokenReceipt and operation.tokenReceipt.received then
+      processUnstake(operationId)
+    end
+  end,
+
+  -- Handler for token receipt
+  tokenReceipt = function(msg)
+    security.assertNotPaused()
+
+    local operationId = msg.Tags['X-Operation-Id']
+    local operation = security.verifyOperation(operationId, 'unstake', 'pending')
+    security.assertIsValidAmm(msg.From, operation.amm)
+
+    -- Store token receipt information in the operation
+    state.updatePendingOperation(operationId, {
+      tokenReceipt = {
+        received = true,
+        token = msg.From,
+        quantity = msg.Quantity
+      }
+    })
+
+    -- Check if burn info has already been received and process if so
+    if operation.burnInfo and operation.burnInfo.received then
+      processUnstake(operationId)
+    end
   end
 }
+
+
+-- Function to process the unstake operation when all information is available
 
 return unstake
