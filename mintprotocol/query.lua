@@ -47,9 +47,6 @@ query.handlers = {
     -- Validate token is allowed
     security.assertTokenAllowed(token)
 
-    -- Verify user has permission to access the requested position
-    security.assertUserCanAccessPosition(user, msg.From)
-
     -- Get the corresponding AMM for this token
     local amm = security.getAmmForToken(token)
 
