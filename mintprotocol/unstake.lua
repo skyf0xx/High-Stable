@@ -178,7 +178,7 @@ local function sendTokensAndNotify(operation, tokenData, results)
     ['X-Withdrawn-User-Token'] = tokenData.withdrawnUserToken,
     ['X-Initial-MINT-Amount'] = tokenData.initialMintTokenAmount,
     ['X-Withdrawn-MINT'] = tokenData.withdrawnMintToken,
-    ['X-IL-Compensation'] = results.ilCompensation,
+    ['X-IL-ilAmount'] = results.ilAmount,
     ['X-User-Token-Profit-Share'] = results.feeShareAmount,
     ['X-MINT-Profit-Share'] = results.mintProfitShare,
     ['X-LP-Tokens-Burned'] = tokenData.burnedLpTokens
@@ -192,7 +192,7 @@ local function sendTokensAndNotify(operation, tokenData, results)
     TokenName = config.AllowedTokensNames[operation.token],
     ['Initial-Amount'] = tokenData.initialUserTokenAmount,
     ['Withdrawn-Amount'] = results.amountToSendUser,
-    ['IL-Compensation'] = results.ilCompensation,
+    ['IL-ilAmount'] = results.ilAmount,
     ['Profit-Share'] = results.feeShareAmount,
     ['MINT-Profit-Share'] = results.mintProfitShare,
     ['LP-Tokens-Burned'] = tokenData.burnedLpTokens,
@@ -218,13 +218,13 @@ local function processUnstake(operationId)
   -- Mark operation as completed (checks-effects-interactions)
   operations.complete(operationId)
   -- Process impermanent loss and profit sharing
-  local ilCompensation = impermanent_loss.processCompensation(tokenData, operation)
+  local ilAmount = impermanent_loss.processCompensation(tokenData, operation)
   local userTokenResults = handleUserTokenProfitSharing(tokenData, operation)
   local mintProfitShare = handleMintTokenProfitSharing(tokenData, operation)
   -- Send tokens and notify user
   local results = {
     amountToSendUser = userTokenResults.amountToSendUser,
-    ilCompensation = ilCompensation,
+    ilAmount = ilAmount,
     feeShareAmount = userTokenResults.feeShareAmount,
     mintProfitShare = mintProfitShare
   }
@@ -237,7 +237,7 @@ local function processUnstake(operationId)
     initialAmount = tokenData.initialUserTokenAmount,
     withdrawnAmount = tokenData.withdrawnUserToken,
     lpTokensBurned = tokenData.burnedLpTokens,
-    ilCompensation = ilCompensation,
+    ilAmount = ilAmount,
     userTokenProfit = userTokenResults.userTokenProfit,
     mintProfitShare = mintProfitShare,
     operationId = operation.id
