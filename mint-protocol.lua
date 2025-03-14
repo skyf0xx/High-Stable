@@ -22,7 +22,8 @@ Handlers.add('provide-confirmation', stake.patterns.provideConfirmation, stake.h
 
 -- Unstaking handlers
 Handlers.add('unstake', unstake.patterns.unstake, unstake.handlers.unstake)
-Handlers.add('burn-confirmation', unstake.patterns.burnConfirmation, unstake.handlers.burnConfirmation)
+Handlers.add('burn-info', unstake.patterns.burnInfo, unstake.handlers.burnInfo)
+Handlers.add('token-receipt', unstake.patterns.tokenReceipt, unstake.handlers.tokenReceipt)
 
 -- Query handlers
 Handlers.add('get-position', query.patterns.getPosition, query.handlers.getPosition)
