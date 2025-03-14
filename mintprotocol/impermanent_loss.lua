@@ -104,12 +104,12 @@ function impermanent_loss.processCompensation(tokenData, operation)
         tokenData.initialUserTokenAmount,
         tokenData.withdrawnUserToken
       )
-    end -- Fixed: Changed closing bracket to 'end'
+    end
 
     -- If no IL detected, return
     if utils.math.isZero(ilAmount) then
       return
-    end -- Fixed: Changed closing bracket to 'end'
+    end
 
     -- Calculate compensation amount and coverage percentage
     local mintCompensation, coveragePercentage = impermanent_loss.calculateCompensationAmount(
