@@ -67,6 +67,7 @@ query.handlers = {
     -- Format amounts for better readability
     local formattedAmount = utils.formatTokenQuantity(position.amount, token, false)
     local formattedLpTokens = utils.formatTokenQuantity(position.lpTokens, amm, true)
+    local formattedMintAmount = utils.formatTokenQuantity(position.mintAmount, config.MINT_TOKEN, false)
 
     -- Reply with position information
     msg.reply({
@@ -78,6 +79,7 @@ query.handlers = {
       ['LP-Tokens'] = position.lpTokens,
       ['Formatted-LP-Tokens'] = formattedLpTokens,
       ['MINT-Amount'] = position.mintAmount,
+      ['Formatted-MINT-Amount'] = formattedMintAmount,
       ['Time-Staked'] = timeStaked,
       ['AMM'] = amm
     })
@@ -104,6 +106,8 @@ query.handlers = {
         -- Format amounts for better readability
         local formattedAmount = utils.formatTokenQuantity(position.amount, token, false)
         local formattedLpTokens = utils.formatTokenQuantity(position.lpTokens, amm, true)
+        local formattedMintAmount = utils.formatTokenQuantity(position.mintAmount, config.MINT_TOKEN, false)
+
 
         -- Add position to results
         positions[token] = {
@@ -113,6 +117,7 @@ query.handlers = {
           lpTokens = position.lpTokens,
           formattedLpTokens = formattedLpTokens,
           mintAmount = position.mintAmount,
+          formattedMintAmount = formattedMintAmount,
           timeStaked = timeStaked,
           amm = amm
         }
