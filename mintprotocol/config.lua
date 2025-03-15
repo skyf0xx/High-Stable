@@ -26,7 +26,7 @@ config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
 
 config.LP_DECIMALS = config.LP_DECIMALS or {
   ['Ruw6Q5gVgZ-isWhRGW4LVvTu6rMost-J5SKsF4rF-rA'] = 12,
-  ['cmZi84AA3f717pna0ck-gM93wq1j1exRdNLdt7saG9o'] = 12,
+  ['UxLqhlBkIITPypglQOOrtcTQddFJU4utYFkwDqFbV7g'] = 12,
   ['Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI'] = 12,
   ['DMB9l4HSp-9qBvXtxDqDTnZZ3qFNCwJgivwSv0XEgN0'] = 12,
   ['oudDA-JUZi14kbKFIhu4X34qGYHbtZnHdtYWEqbtkO0'] = 12,
