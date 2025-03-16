@@ -216,8 +216,11 @@ stake.handlers = {
     local operationId = msg.Tags['X-Operation-Id']
     local operation = security.verifyOperation(operationId, 'stake', 'pending')
 
-    -- Verify the message is from the correct AMM
-    security.assertIsValidAmm(msg.From, operation.amm)
+    if (msg.From == config.MINT_TOKEN) then
+      return -- we are being refunded our own token
+    end
+    -- Verify we're getting refunded a legal token
+    security.assertTokenAllowed(msg)
 
     -- Mark operation as failed (checks-effects-interactions pattern)
     operations.fail(operationId)
