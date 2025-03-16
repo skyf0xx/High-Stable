@@ -220,7 +220,7 @@ stake.handlers = {
       return -- we are being refunded our own token
     end
     -- Verify we're getting refunded a legal token
-    security.assertTokenAllowed(msg)
+    security.assertTokenAllowed(msg.From)
 
     -- Mark operation as failed (checks-effects-interactions pattern)
     operations.fail(operationId)
