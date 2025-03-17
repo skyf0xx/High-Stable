@@ -104,17 +104,41 @@ stake.handlers = {
     state.initializeStakingPosition(token, sender)
 
     -- Query AMM for swap output to determine MINT amount needed
+    -- Query AMM for current reserves to calculate MINT amount needed
     Send({
       Target = amm,
-      Action = 'Get-Swap-Output',
-      Token = token,
-      Quantity = quantity,
-      Swapper = ao.id
+      Action = 'Get-Reserves'
     }).onReply(function(reply)
-      local mintAmount = reply.Tags.Output
+      -- Get reserves for both tokens
+      local mintReserve = reply.Tags[config.MINT_TOKEN]
+      local tokenReserve = reply.Tags[token]
+
+
+      -- Calculate MINT amount based on current price ratio
+      local mintAmount
+      if utils.math.isZero(tokenReserve) then
+        -- If pool is empty, use a default ratio (1:1)
+        mintAmount = quantity
+      else
+        -- Calculate based on current pool ratio: quantity * (mintReserve / tokenReserve)
+        mintAmount = utils.math.divide(
+          utils.math.multiply(quantity, mintReserve),
+          tokenReserve
+        )
+      end
 
       -- Apply excess multiplier to ensure all user tokens are used
       local adjustedMintAmount = utils.calculateAdjustedMintAmount(mintAmount)
+
+      -- Log the calculated amounts
+      utils.logEvent('StakingCalculation', {
+        token = token,
+        quantity = quantity,
+        mintAmount = mintAmount,
+        adjustedMintAmount = adjustedMintAmount,
+        mintReserve = mintReserve,
+        tokenReserve = tokenReserve
+      })
 
       fundStake(opId, token, quantity, amm, adjustedMintAmount)
     end)
