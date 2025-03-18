@@ -16,20 +16,20 @@ config.AllowedTokensNames = config.AllowedTokensNames or {
 }
 
 config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
-  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'Ruw6Q5gVgZ-isWhRGW4LVvTu6rMost-J5SKsF4rF-rA', -- MINT/ qAR AMM -
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 'WjLpu62JJqXQIjXPBmCkoyWNvTJs4muOKcxdAieEmAY', -- MINT/ qAR AMM -
   ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'UxLqhlBkIITPypglQOOrtcTQddFJU4utYFkwDqFbV7g', -- MINT/ wAR AMM -
   ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI', -- MINT/ NAB AMM -
-  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'DMB9l4HSp-9qBvXtxDqDTnZZ3qFNCwJgivwSv0XEgN0', -- MINT/ AO AMM -
-  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'oudDA-JUZi14kbKFIhu4X34qGYHbtZnHdtYWEqbtkO0', -- MINT/ USDC AMM -
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'mqJsHpuJLk77PB0pVCv47KqT3U_xY_ZHQQwHvzUAsWY', -- MINT/ AO AMM -
+  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY', -- MINT/ USDC AMM -
 }
 
 
 config.LP_DECIMALS = config.LP_DECIMALS or {
-  ['Ruw6Q5gVgZ-isWhRGW4LVvTu6rMost-J5SKsF4rF-rA'] = 12,
+  ['WjLpu62JJqXQIjXPBmCkoyWNvTJs4muOKcxdAieEmAY'] = 12,
   ['UxLqhlBkIITPypglQOOrtcTQddFJU4utYFkwDqFbV7g'] = 12,
   ['Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI'] = 12,
-  ['DMB9l4HSp-9qBvXtxDqDTnZZ3qFNCwJgivwSv0XEgN0'] = 12,
-  ['oudDA-JUZi14kbKFIhu4X34qGYHbtZnHdtYWEqbtkO0'] = 12,
+  ['mqJsHpuJLk77PB0pVCv47KqT3U_xY_ZHQQwHvzUAsWY'] = 12,
+  ['eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY'] = 12,
 }
 
 
