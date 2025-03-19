@@ -29,5 +29,8 @@ OPERATIONS
 maintenance.lua --> "Maintenance" (SpkZWLmuKAQ3vIK_1ErUndUxA372HxPtB5ncxa2V9VM)
 airdrop.lua --> "NAB Airdropper" ( WWPYXeDnKggZ1At-AYMaoKmay8e7P2jot_lkL8aZVeE)
 
+TEST TUBE
+test.tube.token.lua --> "Test Tube Token" (U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A)
+
 
 Note: if a process doesn't start through its alias, you can just use its address
