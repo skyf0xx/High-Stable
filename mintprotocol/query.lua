@@ -50,6 +50,9 @@ query.handlers = {
     -- Get the corresponding AMM for this token
     local amm = security.getAmmForToken(token)
 
+    -- Get the appropriate MINT token for this staked token
+    local mintToken = config.getMintTokenForStakedToken(token)
+
     -- Get position or return default values if it doesn't exist
     local position = state.getStakingPosition(token, user) or {
       amount = '0',
@@ -67,7 +70,7 @@ query.handlers = {
     -- Format amounts for better readability
     local formattedAmount = utils.formatTokenQuantity(position.amount, token, false)
     local formattedLpTokens = utils.formatTokenQuantity(position.lpTokens, amm, true)
-    local formattedMintAmount = utils.formatTokenQuantity(position.mintAmount, config.MINT_TOKEN, false)
+    local formattedMintAmount = utils.formatTokenQuantity(position.mintAmount, mintToken, false)
 
     -- Reply with position information
     msg.reply({
@@ -81,7 +84,8 @@ query.handlers = {
       ['MINT-Amount'] = position.mintAmount,
       ['Formatted-MINT-Amount'] = formattedMintAmount,
       ['Time-Staked'] = timeStaked,
-      ['AMM'] = amm
+      ['AMM'] = amm,
+      ['MINT-Token'] = mintToken -- Add which MINT token is used for this position
     })
   end,
 
@@ -95,6 +99,9 @@ query.handlers = {
       local amm = security.getAmmForToken(token)
       local position = state.getStakingPosition(token, user)
 
+      -- Get the appropriate MINT token for this staked token
+      local mintToken = config.getMintTokenForStakedToken(token)
+
       if position and utils.math.isPositive(position.amount) then
         -- Calculate time staked if available
         local timeStaked = ''
@@ -106,7 +113,7 @@ query.handlers = {
         -- Format amounts for better readability
         local formattedAmount = utils.formatTokenQuantity(position.amount, token, false)
         local formattedLpTokens = utils.formatTokenQuantity(position.lpTokens, amm, true)
-        local formattedMintAmount = utils.formatTokenQuantity(position.mintAmount, config.MINT_TOKEN, false)
+        local formattedMintAmount = utils.formatTokenQuantity(position.mintAmount, mintToken, false)
 
 
         -- Add position to results
@@ -119,7 +126,8 @@ query.handlers = {
           mintAmount = position.mintAmount,
           formattedMintAmount = formattedMintAmount,
           timeStaked = timeStaked,
-          amm = amm
+          amm = amm,
+          mintToken = mintToken -- Add which MINT token is used for this position
         }
       end
     end
@@ -139,11 +147,14 @@ query.handlers = {
 
     -- Gather information about all allowed tokens
     for token, name in pairs(config.AllowedTokensNames) do
+      local mintToken = config.getMintTokenForStakedToken(token)
+
       table.insert(allowedTokens, {
         address = token,
         name = name,
         amm = config.TOKEN_AMM_MAPPINGS[token],
-        decimals = config.getDecimalsForToken(token)
+        decimals = config.getDecimalsForToken(token),
+        mintToken = mintToken -- Add which MINT token is used for this token
       })
     end
 
@@ -168,7 +179,11 @@ query.handlers = {
       maxCompensationPerUser = maxCompHuman .. ' MINT',
       protocolFeePercentage = config.PROTOCOL_FEE_PERCENTAGE .. '%',
       rebasingBurnRate = '0.25% weekly for MINT token',
-      allowedTokens = {}
+      allowedTokens = {},
+      mintTokens = {
+        main = config.MINT_TOKEN,
+        testnet = config.MINT_TESTNET_TOKEN
+      }
     }
 
     -- Add coverage explanation
@@ -206,12 +221,25 @@ query.handlers = {
         1)
     }
 
+    -- Add testnet explanation
+    responseData.testnetExplanation = {
+      description = 'The protocol supports both main MINT token and testnet MINT token',
+      usage = 'When staking Test Tube Token, the protocol uses testnet MINT token for all operations',
+      tokens = {
+        ['Test Tube Token'] = config.MINT_TESTNET_TOKEN,
+        ['All other tokens'] = config.MINT_TOKEN
+      }
+    }
+
     -- Add all supported tokens
     for tokenAddr, tokenName in pairs(config.AllowedTokensNames) do
+      local mintToken = config.getMintTokenForStakedToken(tokenAddr)
+
       responseData.allowedTokens[tokenAddr] = {
         name = tokenName,
         amm = config.TOKEN_AMM_MAPPINGS[tokenAddr],
-        decimals = config.getDecimalsForToken(tokenAddr)
+        decimals = config.getDecimalsForToken(tokenAddr),
+        mintToken = mintToken -- Add which MINT token is used for this token
       }
     end
 
@@ -220,7 +248,6 @@ query.handlers = {
     for _, _ in pairs(responseData.allowedTokens) do
       tokenCount = tokenCount + 1
     end
-
 
     -- Safe JSON encoding with pcall for general info
     local success, encodedData = pcall(json.encode, responseData)
@@ -239,7 +266,9 @@ query.handlers = {
       ['Max-Vesting-Days'] = tostring(config.IL_MAX_VESTING_DAYS),
       ['Max-Coverage-Percentage'] = config.IL_MAX_COVERAGE_PERCENTAGE .. '%',
       ['Max-Compensation'] = maxCompHuman .. ' MINT',
-      ['Supported-Tokens'] = tostring(tokenCount)
+      ['Supported-Tokens'] = tostring(tokenCount),
+      ['MINT-Token'] = config.MINT_TOKEN,
+      ['MINT-Testnet-Token'] = config.MINT_TESTNET_TOKEN
     })
   end
   ,
@@ -255,6 +284,10 @@ query.handlers = {
       totalPendingOperations = state.countPendingOperations(),
       tokenMetrics = {},
       impermanentLossMetrics = {},
+      mintTokens = {
+        main = config.MINT_TOKEN,
+        testnet = config.MINT_TESTNET_TOKEN
+      }
     }
 
     -- Track unique users across all tokens
@@ -264,6 +297,9 @@ query.handlers = {
     for token, tokenName in pairs(config.AllowedTokensNames) do
       metrics.totalSupportedTokens = metrics.totalSupportedTokens + 1
 
+      -- Get the appropriate MINT token for this staked token
+      local mintToken = config.getMintTokenForStakedToken(token)
+
       -- Initialize token metrics
       local tokenMetric = {
         address = token,
@@ -272,7 +308,8 @@ query.handlers = {
         activePositions = 0,
         activeUsers = 0,
         amm = config.TOKEN_AMM_MAPPINGS[token],
-        decimals = config.getDecimalsForToken(token)
+        decimals = config.getDecimalsForToken(tokenAddr),
+        mintToken = mintToken -- Add which MINT token is used for this token
       }
 
       -- Get all staking positions for this token
@@ -315,8 +352,12 @@ query.handlers = {
     if metrics.impermanentLossMetrics then
       metrics.totalILOccurrences = 0
       metrics.totalILCompensationAmount = '0'
+      metrics.totalILCompensationByMintToken = {
+        [config.MINT_TOKEN] = '0',
+        [config.MINT_TESTNET_TOKEN] = '0'
+      }
 
-      for _, tokenMetrics in pairs(metrics.impermanentLossMetrics) do
+      for tokenAddr, tokenMetrics in pairs(metrics.impermanentLossMetrics) do
         if tokenMetrics.occurrences then
           metrics.totalILOccurrences = metrics.totalILOccurrences + tokenMetrics.occurrences
         end
@@ -326,15 +367,35 @@ query.handlers = {
             metrics.totalILCompensationAmount,
             tokenMetrics.totalCompensation
           )
+
+          -- Add to the appropriate MINT token total
+          local mintToken = config.getMintTokenForStakedToken(tokenAddr)
+          metrics.totalILCompensationByMintToken[mintToken] = utils.math.add(
+            metrics.totalILCompensationByMintToken[mintToken],
+            tokenMetrics.totalCompensation
+          )
         end
       end
 
-      -- Format total IL compensation to be human-readable
+      -- Format total IL compensation to be human-readable (for both tokens)
       metrics.formattedTotalILCompensation = utils.formatTokenQuantity(
         metrics.totalILCompensationAmount,
         config.MINT_TOKEN,
         false
       )
+
+      metrics.formattedTotalILCompensationByMintToken = {
+        [config.MINT_TOKEN] = utils.formatTokenQuantity(
+          metrics.totalILCompensationByMintToken[config.MINT_TOKEN],
+          config.MINT_TOKEN,
+          false
+        ),
+        [config.MINT_TESTNET_TOKEN] = utils.formatTokenQuantity(
+          metrics.totalILCompensationByMintToken[config.MINT_TESTNET_TOKEN],
+          config.MINT_TESTNET_TOKEN,
+          false
+        )
+      }
     end
 
     -- Add protocol settings
@@ -370,7 +431,9 @@ query.handlers = {
       ['Total-Users'] = tostring(metrics.totalActiveUsers),
       ['Total-Positions'] = tostring(metrics.totalStakingPositions),
       ['Contract-Version'] = config.VERSION,
-      ['Timestamp'] = tostring(metrics.timestamp)
+      ['Timestamp'] = tostring(metrics.timestamp),
+      ['MINT-Token'] = config.MINT_TOKEN,
+      ['MINT-Testnet-Token'] = config.MINT_TESTNET_TOKEN
     })
   end
 }
@@ -385,7 +448,11 @@ function query.getContractStats()
     tokensSupported = 0,
     activeStakingPositions = 0,
     pendingOperations = 0,
-    totalStakedByToken = {}
+    totalStakedByToken = {},
+    mintTokens = {
+      main = config.MINT_TOKEN,
+      testnet = config.MINT_TESTNET_TOKEN
+    }
   }
 
   -- Count supported tokens
@@ -420,11 +487,14 @@ function query.getTokenInfo(tokenAddress)
     return nil
   end
 
+  local mintToken = config.getMintTokenForStakedToken(tokenAddress)
+
   return {
     address = tokenAddress,
     name = config.AllowedTokensNames[tokenAddress],
     amm = config.TOKEN_AMM_MAPPINGS[tokenAddress],
-    decimals = config.getDecimalsForToken(tokenAddress)
+    decimals = config.getDecimalsForToken(tokenAddress),
+    mintToken = mintToken -- Add which MINT token is used for this token
   }
 end
 

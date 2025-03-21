@@ -23,10 +23,13 @@ unstake.patterns = {
 
   -- Pattern for token receipt
   tokenReceipt = function(msg)
+    -- Get token references dynamically to support both MINT and MINT_TESTNET tokens
+    local isMintToken = config.isMintToken(msg.From)
+
     return msg.Tags.Action == 'Credit-Notice' and
       msg.Tags['X-Action'] == 'Burn-LP-Output' and
       config.LP_DECIMALS[msg.From] == nil and -- filter out LP tokens sent to us
-      msg.From ~= config.MINT_TOKEN           -- filter out MINT, we only want the user's token
+      not isMintToken                         -- filter out MINT tokens, we only want the user's token
   end
 }
 
@@ -76,7 +79,7 @@ local function handleUserTokenProfitSharing(tokenData, operation)
 end
 
 -- Calculate the rebased value of MINT tokens after accounting for weekly rebasing
-local function calculateRebasedMintAmount(initialAmount, stakedDate, currentDate)
+local function calculateRebasedMintAmount(initialAmount, stakedDate, currentDate, mintToken)
   -- Calculate number of weeks between staking and unstaking
   local secondsPerWeek = 7 * 24 * 60 * 60
   local stakingDurationSeconds = currentDate - stakedDate
@@ -106,6 +109,9 @@ end
 
 -- Helper function to handle MINT token profit sharing with rebasing adjustments
 local function handleMintTokenProfitSharing(tokenData, operation)
+  -- Get the appropriate MINT token for this staked token
+  local mintToken = config.getMintTokenForStakedToken(operation.token)
+
   -- If initial amount is zero or withdrawnMintToken is less than or equal to zero, there's no profit
   if utils.math.isZero(tokenData.initialMintTokenAmount) or
     not utils.math.isPositive(tokenData.withdrawnMintToken) then
@@ -116,7 +122,8 @@ local function handleMintTokenProfitSharing(tokenData, operation)
   local rebasedInitialAmount = calculateRebasedMintAmount(
     tokenData.initialMintTokenAmount,
     operation.timestamp,
-    os.time()
+    os.time(),
+    mintToken
   )
 
   -- If withdrawn amount is less than the rebased initial amount, there's no profit
@@ -136,7 +143,7 @@ local function handleMintTokenProfitSharing(tokenData, operation)
 
   -- Send user's share of MINT profits
   Send({
-    Target = config.MINT_TOKEN,
+    Target = mintToken,
     Action = 'Transfer',
     Recipient = operation.sender,
     Quantity = userShare,
@@ -148,6 +155,7 @@ local function handleMintTokenProfitSharing(tokenData, operation)
   -- Log MINT profit sharing with rebasing info
   utils.logEvent('MintTokenProfitSharing', {
     sender = operation.sender,
+    mintToken = mintToken,
     initialMintAmount = tokenData.initialMintTokenAmount,
     rebasedInitialAmount = rebasedInitialAmount,
     withdrawnMintAmount = tokenData.withdrawnMintToken,
@@ -181,7 +189,8 @@ local function sendTokensAndNotify(operation, tokenData, results)
     ['X-IL-ilAmount'] = results.ilAmount,
     ['X-User-Token-Profit-Share'] = results.feeShareAmount,
     ['X-MINT-Profit-Share'] = results.mintProfitShare,
-    ['X-LP-Tokens-Burned'] = tokenData.burnedLpTokens
+    ['X-LP-Tokens-Burned'] = tokenData.burnedLpTokens,
+    ['X-MINT-Token'] = config.getMintTokenForStakedToken(operation.token) -- Add which MINT token was used
   })
 
   -- Notify user with a separate message
@@ -196,7 +205,8 @@ local function sendTokensAndNotify(operation, tokenData, results)
     ['Profit-Share'] = results.feeShareAmount,
     ['MINT-Profit-Share'] = results.mintProfitShare,
     ['LP-Tokens-Burned'] = tokenData.burnedLpTokens,
-    ['Operation-Id'] = operation.id
+    ['Operation-Id'] = operation.id,
+    ['MINT-Token'] = config.getMintTokenForStakedToken(operation.token) -- Add which MINT token was used
   })
 end
 
@@ -204,17 +214,20 @@ local function processUnstake(operationId)
   local operation = operations.get(operationId)
   -- Extract token data from stored operation information
   local usersToken = utils.getUsersToken(operation.burnInfo.tokenA, operation.burnInfo.tokenB)
+  local mintToken = utils.getMintToken(operation.burnInfo.tokenA, operation.burnInfo.tokenB)
+
   local tokenData = {
     withdrawnUserToken = (operation.burnInfo.withdrawnTokenA == usersToken) and operation.burnInfo.withdrawnTokenA or
       operation.burnInfo.withdrawnTokenB,
-    withdrawnMintToken = (operation.burnInfo.withdrawnTokenA == config.MINT_TOKEN) and operation.burnInfo
-                                                                                                .withdrawnTokenA or
+    withdrawnMintToken = (operation.burnInfo.withdrawnTokenA == mintToken) and operation.burnInfo.withdrawnTokenA or
       operation.burnInfo.withdrawnTokenB,
     initialUserTokenAmount = operation.amount,
     initialMintTokenAmount = operation.mintAmount,
     burnedLpTokens = operation.burnInfo.burnedPoolTokens,
-    usersToken = usersToken
+    usersToken = usersToken,
+    mintToken = mintToken -- Store which MINT token was used
   }
+
   -- Mark operation as completed (checks-effects-interactions)
   operations.complete(operationId)
   -- Process impermanent loss and profit sharing
@@ -234,6 +247,7 @@ local function processUnstake(operationId)
     sender = operation.sender,
     token = operation.token,
     tokenName = config.AllowedTokensNames[operation.token],
+    mintToken = mintToken, -- Log which MINT token was used
     initialAmount = tokenData.initialUserTokenAmount,
     withdrawnAmount = tokenData.withdrawnUserToken,
     lpTokensBurned = tokenData.burnedLpTokens,
@@ -264,11 +278,15 @@ unstake.handlers = {
     local position = state.getStakingPosition(token, sender)
     local opId = utils.operationId(sender, token, 'unstake')
 
+    -- Get the appropriate MINT token for this staked token
+    local mintToken = config.getMintTokenForStakedToken(token)
+
     -- Log unstake initiated
     utils.logEvent('UnstakeInitiated', {
       sender = sender,
       token = token,
       tokenName = config.AllowedTokensNames[token],
+      mintToken = mintToken, -- Log which MINT token is being used
       amount = position and position.amount or '0',
       lpTokens = position and position.lpTokens or '0',
       operationId = opId
@@ -291,6 +309,7 @@ unstake.handlers = {
       amount = positionAmount,
       lpTokens = positionLpTokens,
       mintAmount = positionMintAmount,
+      mintToken = mintToken, -- Store which MINT token is being used
       amm = amm,
       status = 'pending',
       timestamp = os.time()
@@ -311,7 +330,8 @@ unstake.handlers = {
       Token = token,
       TokenName = config.AllowedTokensNames[token],
       Amount = positionAmount,
-      ['Operation-Id'] = opId
+      ['Operation-Id'] = opId,
+      ['MINT-Token'] = mintToken -- Inform which MINT token is being used
     })
   end,
 
@@ -364,8 +384,5 @@ unstake.handlers = {
     end
   end
 }
-
-
--- Function to process the unstake operation when all information is available
 
 return unstake

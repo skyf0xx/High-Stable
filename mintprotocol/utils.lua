@@ -50,6 +50,17 @@ utils.math = {
   end
 }
 
+-- Determine which MINT token to use based on the staked token
+-- Returns config.MINT_TESTNET_TOKEN for test tokens and config.MINT_TOKEN for real tokens
+utils.getMintTokenForStakedToken = function(stakedToken)
+  return config.getMintTokenForStakedToken(stakedToken)
+end
+
+-- Check if a token is a MINT token (either mainnet or testnet)
+utils.isMintToken = function(token)
+  return token == config.MINT_TOKEN or token == config.MINT_TESTNET_TOKEN
+end
+
 -- Generate operation ID
 utils.operationId = function(sender, token, type)
   return token .. '-' .. type .. '-' .. sender .. '-' .. os.time()
@@ -57,10 +68,21 @@ end
 
 -- Get user's token from a pair (identifies which token in a pair is not the MINT token)
 utils.getUsersToken = function(tokenA, tokenB)
-  if config.MINT_TOKEN == tokenA then
+  if utils.isMintToken(tokenA) then
     return tokenB
   else
     return tokenA
+  end
+end
+
+-- Get the MINT token in a pair
+utils.getMintToken = function(tokenA, tokenB)
+  if utils.isMintToken(tokenA) then
+    return tokenA
+  elseif utils.isMintToken(tokenB) then
+    return tokenB
+  else
+    return nil -- Neither token is a MINT token
   end
 end
 

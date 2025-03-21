@@ -4,6 +4,7 @@
 local config = require('mintprotocol.config')
 local state = require('mintprotocol.state')
 local bint = require('.bint')(256)
+local utils = require('mintprotocol.utils')
 
 local security = {}
 
@@ -152,6 +153,62 @@ security.logSecurityEvent = function(eventType, details)
     details = details,
     timestamp = os.time()
   })
+end
+
+-- NEW FUNCTIONS FOR TESTNET IMPLEMENTATION
+
+-- Check if a token is a MINT token (either mainnet or testnet)
+security.isMintToken = function(token)
+  return utils.isMintToken(token)
+end
+
+-- Assert that a token is a MINT token
+security.assertIsMintToken = function(token)
+  assert(security.isMintToken(token), 'Token is not a MINT token: ' .. token)
+end
+
+-- Get the correct MINT token for a staked token
+security.getCorrectMintToken = function(stakedToken)
+  return config.getMintTokenForStakedToken(stakedToken)
+end
+
+security.validateMintTokenUsage = function(mintToken, stakedToken)
+  local correctMintToken = config.getMintTokenForStakedToken(stakedToken)
+  return mintToken == correctMintToken
+end
+
+-- Enhanced version that throws an error if validation fails
+security.assertCorrectMintToken = function(mintToken, stakedToken)
+  local correctMintToken = config.getMintTokenForStakedToken(stakedToken)
+  assert(mintToken == correctMintToken,
+    'Incorrect MINT token for staked token. Expected: ' .. correctMintToken .. ', got: ' .. mintToken)
+end
+-- Validate operations don't mix testnet and mainnet tokens
+security.validateNoTokenMixing = function(operation)
+  -- If mintToken is specified in the operation, validate it's the correct one for the staked token
+  if operation.mintToken then
+    security.assertCorrectMintToken(operation.mintToken, operation.token)
+  end
+
+  -- If we have burn info with tokens, validate they don't mix testnet and mainnet
+  if operation.burnInfo then
+    local tokenA = operation.burnInfo.tokenA
+    local tokenB = operation.burnInfo.tokenB
+
+    -- If both tokens are MINT tokens, they should be the same
+    if security.isMintToken(tokenA) and security.isMintToken(tokenB) then
+      assert(tokenA == tokenB, 'Mixed MINT tokens detected in operation')
+    end
+
+    -- If one token is a MINT token, it should be the correct one for the staked token
+    if security.isMintToken(tokenA) then
+      security.assertCorrectMintToken(tokenA, operation.token)
+    elseif security.isMintToken(tokenB) then
+      security.assertCorrectMintToken(tokenB, operation.token)
+    end
+  end
+
+  return true
 end
 
 return security

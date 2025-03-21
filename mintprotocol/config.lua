@@ -5,6 +5,7 @@ local config = {}
 
 -- Token constants
 config.MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
+config.MINT_TESTNET_TOKEN = '_8pubNOSHLFNaSMHtCNIhFW68XUuLmwiH6ALHtNDzlQ'
 
 -- Initialize configuration state from existing globals or use defaults
 config.AllowedTokensNames = config.AllowedTokensNames or {
@@ -12,7 +13,18 @@ config.AllowedTokensNames = config.AllowedTokensNames or {
   ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = 'Wrapped AR (wAR)',
   ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Number Always Bigger (NAB)',
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'AO Token (AO)',
-  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'Ethereum-Wrapped USDC (USDC)'
+  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'Ethereum-Wrapped USDC (USDC)',
+  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'Test Tube Token',
+}
+
+-- Mapping from staked token to the MINT token it should use
+config.STAKED_TOKEN_TO_MINT_TOKEN = config.STAKED_TOKEN_TO_MINT_TOKEN or {
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = config.MINT_TOKEN,         -- qAR uses main MINT
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = config.MINT_TOKEN,         -- wAR uses main MINT
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = config.MINT_TOKEN,         -- NAB uses main MINT
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = config.MINT_TOKEN,         -- AO uses main MINT
+  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = config.MINT_TOKEN,         -- USDC uses main MINT
+  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = config.MINT_TESTNET_TOKEN, -- Test Tube Token uses testnet MINT
 }
 
 config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
@@ -21,6 +33,7 @@ config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
   ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI', -- MINT/ NAB AMM -
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'mqJsHpuJLk77PB0pVCv47KqT3U_xY_ZHQQwHvzUAsWY', -- MINT/ AO AMM -
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY', -- MINT/ USDC AMM -
+  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'KwYRym6Oku73keCTMrMUFxXRPuDTsv_NFPsvzUJdtH0', -- Test Tube Token/ MINT Test token AMM -
 }
 
 
@@ -30,6 +43,7 @@ config.LP_DECIMALS = config.LP_DECIMALS or {
   ['Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI'] = 12,
   ['mqJsHpuJLk77PB0pVCv47KqT3U_xY_ZHQQwHvzUAsWY'] = 12,
   ['eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY'] = 12,
+  ['KwYRym6Oku73keCTMrMUFxXRPuDTsv_NFPsvzUJdtH0'] = 12,
 }
 
 
@@ -37,6 +51,7 @@ config.LP_DECIMALS = config.LP_DECIMALS or {
 config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
   -- MINT token decimal places
   [config.MINT_TOKEN] = 8,
+  [config.MINT_TESTNET_TOKEN] = 8, -- Add testnet token with same decimals
 
   -- Other tokens decimal places
   ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 12, -- qAR (12 decimals)
@@ -44,6 +59,7 @@ config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
   ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 8,  -- NAB (8 decimals)
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 12, -- AO (12 decimals)
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 6,  -- USDC (6 decimals)
+  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 12, -- Test Tube Token (12 decimals)
 }
 
 
@@ -97,7 +113,24 @@ config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress, decim
   config.LP_DECIMALS[ammAddress] = lpDecimals
   config.TOKEN_DECIMALS[tokenAddress] = decimals
 
+  -- Set default MINT token for this staked token (can be overridden)
+  if tokenAddress == 'U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A' then
+    config.STAKED_TOKEN_TO_MINT_TOKEN[tokenAddress] = config.MINT_TESTNET_TOKEN
+  else
+    config.STAKED_TOKEN_TO_MINT_TOKEN[tokenAddress] = config.MINT_TOKEN
+  end
+
   return true
+end
+
+-- Get the appropriate MINT token to use for a given staked token
+config.getMintTokenForStakedToken = function(stakedToken)
+  return config.STAKED_TOKEN_TO_MINT_TOKEN[stakedToken] or config.MINT_TOKEN
+end
+
+-- Check if a token is a MINT token (either mainnet or testnet)
+config.isMintToken = function(token)
+  return token == config.MINT_TOKEN or token == config.MINT_TESTNET_TOKEN
 end
 
 -- Get decimals for a specific token

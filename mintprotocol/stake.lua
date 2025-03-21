@@ -14,9 +14,12 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
   -- Verify operation exists and is in pending state
   security.verifyOperation(opId, 'stake', 'pending')
 
+  -- Get the appropriate MINT token for this staked token
+  local mintToken = config.getMintTokenForStakedToken(token)
+
   -- Transfer MINT to the AMM from our treasury
   Send({
-    Target = config.MINT_TOKEN,
+    Target = mintToken,
     Action = 'Transfer',
     Recipient = amm,
     Quantity = adjustedMintAmount,
@@ -43,8 +46,6 @@ stake.patterns = {
   stake = function(msg)
     return msg.Tags.Action == 'Credit-Notice' and msg.Tags['X-User-Request'] == 'Stake'
   end,
-
-
 
   -- Pattern for AMM providing confirmation of liquidity provision
   provideConfirmation = function(msg)
@@ -109,8 +110,11 @@ stake.handlers = {
       Target = amm,
       Action = 'Get-Reserves'
     }).onReply(function(reply)
+      -- Get the appropriate MINT token for this staked token
+      local mintToken = config.getMintTokenForStakedToken(token)
+
       -- Get reserves for both tokens
-      local mintReserve = reply.Tags[config.MINT_TOKEN]
+      local mintReserve = reply.Tags[mintToken]
       local tokenReserve = reply.Tags[token]
 
 
@@ -133,6 +137,7 @@ stake.handlers = {
       -- Log the calculated amounts
       utils.logEvent('StakingCalculation', {
         token = token,
+        mintToken = mintToken,
         quantity = quantity,
         mintAmount = mintAmount,
         adjustedMintAmount = adjustedMintAmount,
@@ -157,6 +162,9 @@ stake.handlers = {
     local receivedLP = msg.Tags['Received-Pool-Tokens']
     local usersToken = utils.getUsersToken(msg.Tags['Token-A'], msg.Tags['Token-B'])
 
+    -- Get the appropriate MINT token for this staked token
+    local mintToken = config.getMintTokenForStakedToken(operation.token)
+
     -- Update staking position with new values
     state.updateStakingPosition(operation.token, operation.sender, {
       amount = utils.math.add(
@@ -165,7 +173,7 @@ stake.handlers = {
       lpTokens = utils.math.add(
         state.getStakingPosition(operation.token, operation.sender).lpTokens,
         receivedLP),
-      mintAmount = msg.Tags['Provided-' .. config.MINT_TOKEN],
+      mintAmount = msg.Tags['Provided-' .. mintToken],
       stakedDate = os.time()
     })
 
@@ -179,9 +187,12 @@ stake.handlers = {
       local token1 = reply.Tags['Token-1']
       local token2 = reply.Tags['Token-2']
 
+      -- Get the appropriate MINT token for this staked token
+      local mintToken = config.getMintTokenForStakedToken(operation.token)
+
       -- Determine which reserve corresponds to which token
       local mintReserve, tokenReserve
-      if token1 == config.MINT_TOKEN then
+      if token1 == mintToken then
         mintReserve = reserve1
         tokenReserve = reserve2
       else
@@ -200,6 +211,7 @@ stake.handlers = {
       utils.logEvent('InitialPriceRatioRecorded', {
         token = operation.token,
         tokenName = config.AllowedTokensNames[operation.token],
+        mintToken = mintToken,
         initialPriceRatio = tokenPerMint,
         sender = operation.sender
       })
@@ -209,6 +221,7 @@ stake.handlers = {
     state.updatePendingOperation(operationId, {
       amount = msg.Tags['Provided-' .. usersToken],
       lpTokens = receivedLP,
+      mintToken = mintToken,
       status = 'completed'
     })
 
@@ -217,6 +230,7 @@ stake.handlers = {
       sender = operation.sender,
       token = operation.token,
       tokenName = config.AllowedTokensNames[operation.token],
+      mintToken = mintToken,
       amount = msg.Tags['Provided-' .. usersToken],
       lpTokens = receivedLP,
       operationId = operationId
@@ -229,7 +243,8 @@ stake.handlers = {
       Token = operation.token,
       TokenName = config.AllowedTokensNames[operation.token],
       Amount = msg.Tags['Provided-' .. usersToken],
-      ['LP-Tokens'] = receivedLP
+      ['LP-Tokens'] = receivedLP,
+      ['MINT-Token'] = mintToken
     })
   end,
 
@@ -240,7 +255,10 @@ stake.handlers = {
     local operationId = msg.Tags['X-Operation-Id']
     local operation = security.verifyOperation(operationId, 'stake', 'pending')
 
-    if (msg.From == config.MINT_TOKEN) then
+    -- Get the appropriate MINT token for this staked token
+    local mintToken = config.getMintTokenForStakedToken(operation.token)
+
+    if (msg.From == mintToken) then
       return -- we are being refunded our own token
     end
     -- Verify we're getting refunded a legal token
@@ -254,13 +272,14 @@ stake.handlers = {
       sender = operation.sender,
       token = operation.token,
       tokenName = config.AllowedTokensNames[operation.token],
+      mintToken = mintToken,
       amount = operation.amount,
       error = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision',
       operationId = operationId
     })
 
     -- Determine recipient based on token type
-    local recipient = operation.token == config.MINT_TOKEN and config.MINT_TOKEN or operation.sender
+    local recipient = operation.token == mintToken and mintToken or operation.sender
 
     -- Return the tokens
     Send({
@@ -283,8 +302,8 @@ stake.handlers = {
     -- Verify the quantity is valid
     security.assertPositiveQuantity(quantity)
 
-    -- If token is MINT allow to stay in our treasury
-    if token == config.MINT_TOKEN then
+    -- If token is any MINT token, allow to stay in our treasury
+    if config.isMintToken(token) then
       return
     end
 

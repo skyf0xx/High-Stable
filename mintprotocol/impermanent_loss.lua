@@ -47,7 +47,6 @@ function impermanent_loss.calculateCompensationAmount(ilAmount, finalPriceRatio,
 end
 
 -- Process impermanent loss compensation for an unstaking operation
--- Process impermanent loss compensation for an unstaking operation
 function impermanent_loss.processCompensation(tokenData, operation)
   -- Get position to retrieve initial price ratio and stake date
   local position = state.getStakingPosition(operation.token, operation.sender) or {}
@@ -60,10 +59,13 @@ function impermanent_loss.processCompensation(tokenData, operation)
   -- If no IL detected through simple method and no initial price ratio, return early
   if not simpleIL and not initialPriceRatio then
     return '0'
-  end -- Fixed: Changed closing bracket to 'end'
+  end
 
   -- Get the AMM for the token
   local amm = security.getAmmForToken(operation.token)
+
+  -- Get the appropriate MINT token for this staked token
+  local mintToken = config.getMintTokenForStakedToken(operation.token)
 
   -- Query AMM for current price ratio (final ratio)
   Send({
@@ -77,7 +79,7 @@ function impermanent_loss.processCompensation(tokenData, operation)
 
     -- Determine which reserve corresponds to which token
     local mintReserve, tokenReserve
-    if token1 == config.MINT_TOKEN then
+    if token1 == mintToken then
       mintReserve = reserve1
       tokenReserve = reserve2
     else
@@ -118,9 +120,9 @@ function impermanent_loss.processCompensation(tokenData, operation)
       initialStakeDate
     )
 
-    -- Send compensation to the user
+    -- Send compensation to the user using the appropriate MINT token
     Send({
-      Target = config.MINT_TOKEN,
+      Target = mintToken,
       Action = 'Transfer',
       Recipient = operation.sender,
       Quantity = mintCompensation,
@@ -131,7 +133,8 @@ function impermanent_loss.processCompensation(tokenData, operation)
       ['X-Coverage-Percentage'] = coveragePercentage,
       ['X-Staking-Duration-Days'] = tostring(math.floor((os.time() - initialStakeDate) / (24 * 60 * 60))),
       ['X-Initial-Price-Ratio'] = initialPriceRatio or 'N/A',
-      ['X-Final-Price-Ratio'] = finalPriceRatio
+      ['X-Final-Price-Ratio'] = finalPriceRatio,
+      ['X-MINT-Token'] = mintToken
     })
 
     -- Record metrics and log the compensation
@@ -142,6 +145,7 @@ function impermanent_loss.processCompensation(tokenData, operation)
       sender = operation.sender,
       token = operation.token,
       tokenName = config.AllowedTokensNames[operation.token],
+      mintToken = mintToken,
       initialAmount = tokenData.initialUserTokenAmount,
       withdrawnAmount = tokenData.withdrawnUserToken,
       ilAmount = ilAmount,
@@ -166,6 +170,9 @@ end
 function impermanent_loss.estimateIL(token, lpAmount, initialUserAmount, initialMintAmount)
   local amm = security.getAmmForToken(token)
 
+  -- Get the appropriate MINT token for this staked token
+  local mintToken = config.getMintTokenForStakedToken(token)
+
   -- Create a promise-like structure for async response
   local estimationResult = {
     pending = true,
@@ -182,7 +189,7 @@ function impermanent_loss.estimateIL(token, lpAmount, initialUserAmount, initial
   }).onReply(function(reply)
     -- Extract the simulated withdrawn amounts
     local simulatedWithdrawnUserToken = reply.Tags['Simulated-Withdrawn-' .. token]
-    local simulatedWithdrawnMintToken = reply.Tags['Simulated-Withdrawn-' .. config.MINT_TOKEN]
+    local simulatedWithdrawnMintToken = reply.Tags['Simulated-Withdrawn-' .. mintToken]
 
     -- Calculate potential token deficit (impermanent loss)
     local tokenDeficit = '0'
@@ -219,7 +226,8 @@ function impermanent_loss.estimateIL(token, lpAmount, initialUserAmount, initial
           simulatedWithdrawnUserToken = simulatedWithdrawnUserToken,
           simulatedWithdrawnMintToken = simulatedWithdrawnMintToken,
           initialUserAmount = initialUserAmount,
-          initialMintAmount = initialMintAmount
+          initialMintAmount = initialMintAmount,
+          mintToken = mintToken
         }
 
         estimationResult.completed = true
@@ -235,7 +243,8 @@ function impermanent_loss.estimateIL(token, lpAmount, initialUserAmount, initial
         simulatedWithdrawnUserToken = simulatedWithdrawnUserToken,
         simulatedWithdrawnMintToken = simulatedWithdrawnMintToken,
         initialUserAmount = initialUserAmount,
-        initialMintAmount = initialMintAmount
+        initialMintAmount = initialMintAmount,
+        mintToken = mintToken
       }
 
       estimationResult.completed = true
@@ -249,6 +258,9 @@ end
 -- Extract current price ratio from liquidity pool
 function impermanent_loss.getCurrentPriceRatio(token)
   local amm = security.getAmmForToken(token)
+
+  -- Get the appropriate MINT token for this staked token
+  local mintToken = config.getMintTokenForStakedToken(token)
 
   -- Create a promise-like structure for async response
   local ratioResult = {
@@ -269,7 +281,7 @@ function impermanent_loss.getCurrentPriceRatio(token)
 
     -- Determine which reserve corresponds to which token
     local mintReserve, tokenReserve
-    if token1 == config.MINT_TOKEN then
+    if token1 == mintToken then
       mintReserve = reserve1
       tokenReserve = reserve2
     else
@@ -287,6 +299,7 @@ function impermanent_loss.getCurrentPriceRatio(token)
       mintPerToken = mintPerToken,
       tokenReserve = tokenReserve,
       mintReserve = mintReserve,
+      mintToken = mintToken,
       timestamp = os.time()
     }
 
@@ -297,6 +310,7 @@ function impermanent_loss.getCurrentPriceRatio(token)
     utils.logEvent('PriceRatioQueried', {
       token = token,
       tokenName = config.AllowedTokensNames[token],
+      mintToken = mintToken,
       tokenPerMint = tokenPerMint,
       mintPerToken = mintPerToken
     })
@@ -327,7 +341,8 @@ function impermanent_loss.recordMetrics(token, ilAmount, compensationAmount)
   table.insert(ILMetrics[token].history, {
     timestamp = os.time(),
     ilAmount = ilAmount,
-    compensationAmount = compensationAmount
+    compensationAmount = compensationAmount,
+    mintToken = config.getMintTokenForStakedToken(token)
   })
 
   -- Trim history if needed
@@ -339,6 +354,7 @@ function impermanent_loss.recordMetrics(token, ilAmount, compensationAmount)
   utils.logEvent('ILMetricsUpdated', {
     token = token,
     tokenName = config.AllowedTokensNames[token],
+    mintToken = config.getMintTokenForStakedToken(token),
     totalIL = ILMetrics[token].totalIL,
     totalCompensation = ILMetrics[token].totalCompensation,
     occurrences = ILMetrics[token].occurrences
@@ -355,6 +371,7 @@ function impermanent_loss.getMetrics(token)
     for tokenAddr, metrics in pairs(ILMetrics or {}) do
       allMetrics[tokenAddr] = {
         tokenName = config.AllowedTokensNames[tokenAddr],
+        mintToken = config.getMintTokenForStakedToken(tokenAddr),
         totalIL = metrics.totalIL,
         totalCompensation = metrics.totalCompensation,
         occurrences = metrics.occurrences,
@@ -413,8 +430,6 @@ function impermanent_loss.getILHistory(token)
   return ILMetrics[token].history
 end
 
--- Calculate impermanent loss using the standard IL formula:
--- IL_X = max(Deposited_X * (1 - sqrt(R_final / R_initial)), 0)
 -- Calculate impermanent loss using the standard IL formula:
 -- IL_X = max(Deposited_X * (1 - sqrt(R_final / R_initial)), 0)
 function impermanent_loss.calculateStandardIL(initialAmount, initialRatio, finalRatio)
