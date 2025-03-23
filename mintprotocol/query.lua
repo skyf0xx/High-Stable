@@ -308,7 +308,7 @@ query.handlers = {
         activePositions = 0,
         activeUsers = 0,
         amm = config.TOKEN_AMM_MAPPINGS[token],
-        decimals = config.getDecimalsForToken(tokenAddr),
+        decimals = config.getDecimalsForToken(token),
         mintToken = mintToken -- Add which MINT token is used for this token
       }
 
