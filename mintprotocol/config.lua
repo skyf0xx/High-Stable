@@ -15,6 +15,7 @@ config.AllowedTokensNames = config.AllowedTokensNames or {
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'AO Token (AO)',
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'Ethereum-Wrapped USDC (USDC)',
   ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'Test Tube Token',
+  ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = 'MATRIX (MATRIX)',
 }
 
 -- Mapping from staked token to the MINT token it should use
@@ -25,6 +26,7 @@ config.STAKED_TOKEN_TO_MINT_TOKEN = config.STAKED_TOKEN_TO_MINT_TOKEN or {
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = config.MINT_TOKEN,         -- AO uses main MINT
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = config.MINT_TOKEN,         -- USDC uses main MINT
   ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = config.MINT_TESTNET_TOKEN, -- Test Tube Token uses testnet MINT
+  ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = config.MINT_TESTNET_TOKEN, -- MATRIX Token uses testnet MINT
 }
 
 config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
@@ -34,6 +36,9 @@ config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'mqJsHpuJLk77PB0pVCv47KqT3U_xY_ZHQQwHvzUAsWY', -- MINT/ AO AMM -
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY', -- MINT/ USDC AMM -
   ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'KwYRym6Oku73keCTMrMUFxXRPuDTsv_NFPsvzUJdtH0', -- Test Tube Token/ MINT Test token AMM -
+  ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] =
+  'TO_DEFINE'                                                                                      -- MATRIX/ MINT Test token AMM -
+
 }
 
 
@@ -44,6 +49,7 @@ config.LP_DECIMALS = config.LP_DECIMALS or {
   ['mqJsHpuJLk77PB0pVCv47KqT3U_xY_ZHQQwHvzUAsWY'] = 12,
   ['eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY'] = 12,
   ['KwYRym6Oku73keCTMrMUFxXRPuDTsv_NFPsvzUJdtH0'] = 12,
+  ['TO_DEFINE'] = 12,
 }
 
 
@@ -60,8 +66,8 @@ config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 12, -- AO (12 decimals)
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 6,  -- USDC (6 decimals)
   ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 12, -- Test Tube Token (12 decimals)
+  ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = 18, -- MATRIX Token (18 decimals)
 }
-
 
 -- Impermanent loss protection parameters
 config.IL_MAX_VESTING_DAYS = 30          -- T_max: full vesting period in days
