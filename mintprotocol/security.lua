@@ -147,7 +147,6 @@ end
 
 -- Log unauthorized access attempts
 security.logSecurityEvent = function(eventType, details)
-  local utils = require('utils')
   utils.logEvent('SecurityEvent', {
     type = eventType,
     details = details,
