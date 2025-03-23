@@ -14,9 +14,10 @@ config.AllowedTokensNames = config.AllowedTokensNames or {
   ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Number Always Bigger (NAB)',
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'AO Token (AO)',
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'Ethereum-Wrapped USDC (USDC)',
-  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'Test Tube Token',
+  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'Test Tube Token (TTT)',
   ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = 'MATRIX (MATRIX)',
 }
+
 
 -- Mapping from staked token to the MINT token it should use
 config.STAKED_TOKEN_TO_MINT_TOKEN = config.STAKED_TOKEN_TO_MINT_TOKEN or {
