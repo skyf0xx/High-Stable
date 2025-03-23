@@ -114,7 +114,9 @@ config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress, decim
   config.TOKEN_DECIMALS[tokenAddress] = decimals
 
   -- Set default MINT token for this staked token (can be overridden)
-  if tokenAddress == 'U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A' then
+  if tokenAddress == 'U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'
+    or tokenAddress == 'XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'
+  then
     config.STAKED_TOKEN_TO_MINT_TOKEN[tokenAddress] = config.MINT_TESTNET_TOKEN
   else
     config.STAKED_TOKEN_TO_MINT_TOKEN[tokenAddress] = config.MINT_TOKEN
