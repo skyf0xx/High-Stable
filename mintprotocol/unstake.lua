@@ -217,15 +217,15 @@ local function processUnstake(operationId)
   local mintToken = utils.getMintToken(operation.burnInfo.tokenA, operation.burnInfo.tokenB)
 
   local tokenData = {
-    withdrawnUserToken = (operation.burnInfo.withdrawnTokenA == usersToken) and operation.burnInfo.withdrawnTokenA or
+    withdrawnUserToken = (operation.burnInfo.tokenA == usersToken) and operation.burnInfo.withdrawnTokenA or
       operation.burnInfo.withdrawnTokenB,
-    withdrawnMintToken = (operation.burnInfo.withdrawnTokenA == mintToken) and operation.burnInfo.withdrawnTokenA or
+    withdrawnMintToken = (operation.burnInfo.tokenA == mintToken) and operation.burnInfo.withdrawnTokenA or
       operation.burnInfo.withdrawnTokenB,
     initialUserTokenAmount = operation.amount,
     initialMintTokenAmount = operation.mintAmount,
     burnedLpTokens = operation.burnInfo.burnedPoolTokens,
     usersToken = usersToken,
-    mintToken = mintToken -- Store which MINT token was used
+    mintToken = mintToken
   }
 
   -- Mark operation as completed (checks-effects-interactions)
