@@ -367,7 +367,7 @@ unstake.handlers = {
 
     local operationId = msg.Tags['X-Operation-Id']
     local operation = security.verifyOperation(operationId, 'unstake', 'pending')
-    security.assertIsValidAmm(msg.From, operation.amm)
+    security.assertTokenAllowed(msg.From)
 
     -- Store token receipt information in the operation
     state.updatePendingOperation(operationId, {
