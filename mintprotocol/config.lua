@@ -58,7 +58,7 @@ config.LP_DECIMALS = config.LP_DECIMALS or {
 config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
   -- MINT token decimal places
   [config.MINT_TOKEN] = 8,
-  [config.MINT_TESTNET_TOKEN] = 8, -- Add testnet token with same decimals
+  [config.MINT_TESTNET_TOKEN] = 18,
 
   -- Other tokens decimal places
   ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = 12, -- qAR (12 decimals)
