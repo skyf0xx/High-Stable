@@ -17,27 +17,74 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
   -- Get the appropriate MINT token for this staked token
   local mintToken = config.getMintTokenForStakedToken(token)
 
-  -- Transfer MINT to the AMM from our treasury
+  -- Get the operation details
+  local operation = operations.get(opId)
+
+  -- Check MINT balance in treasury
   Send({
     Target = mintToken,
-    Action = 'Transfer',
-    Recipient = amm,
-    Quantity = adjustedMintAmount,
-    ['X-Action'] = 'Provide',
-    ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
-    ['X-Operation-Id'] = opId
-  })
+    Action = 'Balance',
+    Recipient = ao.id -- The contract itself acts as the treasury
+  }).onReply(function(balanceReply)
+    local mintTreasuryBalance = balanceReply.Balance or '0'
 
-  -- Transfer the user's token to the AMM
-  Send({
-    Target = token,
-    Action = 'Transfer',
-    Recipient = amm,
-    Quantity = quantity,
-    ['X-Action'] = 'Provide',
-    ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
-    ['X-Operation-Id'] = opId
-  })
+    -- Check if there's enough MINT in the treasury
+    if utils.math.isGreaterThan(mintTreasuryBalance, adjustedMintAmount) or
+      utils.math.isEqual(mintTreasuryBalance, adjustedMintAmount) then
+      -- Proceed with funding the stake
+
+      -- Transfer MINT to the AMM from our treasury
+      Send({
+        Target = mintToken,
+        Action = 'Transfer',
+        Recipient = amm,
+        Quantity = adjustedMintAmount,
+        ['X-Action'] = 'Provide',
+        ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+        ['X-Operation-Id'] = opId
+      })
+
+      -- Transfer the user's token to the AMM
+      Send({
+        Target = token,
+        Action = 'Transfer',
+        Recipient = amm,
+        Quantity = quantity,
+        ['X-Action'] = 'Provide',
+        ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+        ['X-Operation-Id'] = opId
+      })
+    else
+      -- Not enough MINT in treasury, cancel the stake and refund the user
+      operations.fail(opId)
+
+      -- Log the failed stake event
+      utils.logEvent('StakeFailed', {
+        sender = operation.sender,
+        token = token,
+        tokenName = config.AllowedTokensNames[token],
+        mintToken = mintToken,
+        amount = quantity,
+        error = 'Insufficient MINT balance in treasury',
+        requiredAmount = adjustedMintAmount,
+        availableAmount = mintTreasuryBalance,
+        operationId = opId
+      })
+
+      -- Refund the user's tokens
+      Send({
+        Target = token,
+        Action = 'Transfer',
+        Recipient = operation.sender,
+        Quantity = quantity,
+        ['X-Refund-Reason'] = 'Insufficient MINT balance in treasury',
+        ['X-Error'] = 'Insufficient MINT balance in treasury',
+        ['X-Required-Amount'] = adjustedMintAmount,
+        ['X-Available-Amount'] = mintTreasuryBalance,
+        ['X-Operation-Id'] = opId
+      })
+    end
+  end)
 end
 
 -- Handler patterns for staking operations
