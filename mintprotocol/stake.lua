@@ -10,6 +10,20 @@ local operations = require('mintprotocol.operations')
 
 local stake = {}
 
+-- Trim a string number to only the integer part based on the number of decimal places
+local function trimToIntegerPart(stringNumber, decimalPlaces)
+  -- Convert to string if not already
+  stringNumber = tostring(stringNumber)
+
+  -- If the number is shorter than or equal to the decimal places, return zero
+  if #stringNumber <= decimalPlaces then
+    return '0'
+  end
+
+  -- Otherwise, trim the decimal part
+  return string.sub(stringNumber, 1, #stringNumber - decimalPlaces)
+end
+
 local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
   -- Verify operation exists and is in pending state
   security.verifyOperation(opId, 'stake', 'pending')
@@ -28,9 +42,33 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
   }).onReply(function(balanceReply)
     local mintTreasuryBalance = balanceReply.Balance or '0'
 
-    -- Check if there's enough MINT in the treasury
-    if utils.math.isGreaterThan(mintTreasuryBalance, adjustedMintAmount) or
-      utils.math.isEqual(mintTreasuryBalance, adjustedMintAmount) then
+    -- Get the number of decimal places for the MINT token
+    local mintDecimals = config.TOKEN_DECIMALS[mintToken]
+
+    -- Trim the balance and adjusted amount to integer parts
+    local trimmedBalance = trimToIntegerPart(mintTreasuryBalance, mintDecimals)
+    local trimmedAdjustedAmount = trimToIntegerPart(adjustedMintAmount, mintDecimals)
+
+    -- Calculate threshold based on percentage of treasury
+    local percentThreshold = '10' -- 10% of treasury
+    local percentageBased = utils.math.divide(
+      utils.math.multiply(trimmedBalance, percentThreshold),
+      '100'
+    )
+
+    -- Fixed maximum amount (in MINT)
+    local maxAmount = '50000' -- 50,000 MINT tokens
+    -- We're working with the integer part now, so no need to adjust for decimals
+    local fixedMaxAmount = maxAmount
+
+    -- Use the smaller of the two thresholds
+    local threshold = utils.math.isLessThan(percentageBased, fixedMaxAmount)
+      and percentageBased
+      or fixedMaxAmount
+
+    -- Check if requested amount is below threshold and treasury has sufficient balance
+    if utils.math.isLessThan(trimmedAdjustedAmount, threshold) and
+      utils.math.isLessThan(trimmedAdjustedAmount, trimmedBalance) then
       -- Proceed with funding the stake
 
       -- Transfer MINT to the AMM from our treasury
@@ -38,7 +76,7 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         Target = mintToken,
         Action = 'Transfer',
         Recipient = amm,
-        Quantity = adjustedMintAmount,
+        Quantity = adjustedMintAmount, -- Use the original full amount for transfer
         ['X-Action'] = 'Provide',
         ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
         ['X-Operation-Id'] = opId
