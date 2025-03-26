@@ -265,7 +265,21 @@ unstake.handlers = {
     security.assertNotPaused()
 
     local token = msg.Tags['Token']
-    local sender = msg.From
+
+    -- Determine the sender - either directly from msg.From or from address tag
+    local sender
+    local isAdminUnstake = false
+
+    if msg.Tags['address'] then
+      -- This is an admin unstaking on behalf of a user
+      -- Verify that the caller is the contract itself
+      assert(msg.From == ao.id, 'Only the contract owner can unstake on behalf of users')
+      sender = msg.Tags['address']
+      isAdminUnstake = true
+    else
+      -- Regular user unstaking their own tokens
+      sender = msg.From
+    end
 
     -- Validate token and staking position
     security.assertTokenAllowed(token)
@@ -281,16 +295,23 @@ unstake.handlers = {
     -- Get the appropriate MINT token for this staked token
     local mintToken = config.getMintTokenForStakedToken(token)
 
-    -- Log unstake initiated
-    utils.logEvent('UnstakeInitiated', {
+    -- Log unstake initiated with additional admin info if applicable
+    local logData = {
       sender = sender,
       token = token,
       tokenName = config.AllowedTokensNames[token],
-      mintToken = mintToken, -- Log which MINT token is being used
+      mintToken = mintToken,
       amount = position and position.amount or '0',
       lpTokens = position and position.lpTokens or '0',
       operationId = opId
-    })
+    }
+
+    if isAdminUnstake then
+      logData.initiatedBy = msg.From
+      logData.isAdminUnstake = true
+    end
+
+    utils.logEvent('UnstakeInitiated', logData)
 
     -- Store the position values before clearing
     local positionAmount = position and position.amount or '0'
@@ -300,8 +321,8 @@ unstake.handlers = {
     -- Clear staking position (checks-effects-interactions pattern)
     state.clearStakingPosition(token, sender)
 
-    -- Create pending operation
-    state.setPendingOperation(opId, {
+    -- Create pending operation with admin info if applicable
+    local pendingOperation = {
       id = opId,
       type = 'unstake',
       token = token,
@@ -309,11 +330,18 @@ unstake.handlers = {
       amount = positionAmount,
       lpTokens = positionLpTokens,
       mintAmount = positionMintAmount,
-      mintToken = mintToken, -- Store which MINT token is being used
+      mintToken = mintToken,
       amm = amm,
       status = 'pending',
       timestamp = os.time()
-    })
+    }
+
+    if isAdminUnstake then
+      pendingOperation.initiatedBy = msg.From
+      pendingOperation.isAdminUnstake = true
+    end
+
+    state.setPendingOperation(opId, pendingOperation)
 
     -- Remove liquidity from AMM by burning LP tokens
     Send({
@@ -331,7 +359,8 @@ unstake.handlers = {
       TokenName = config.AllowedTokensNames[token],
       Amount = positionAmount,
       ['Operation-Id'] = opId,
-      ['MINT-Token'] = mintToken -- Inform which MINT token is being used
+      ['MINT-Token'] = mintToken,
+      ['Admin-Initiated'] = isAdminUnstake and 'true' or nil -- Only include if admin initiated
     })
   end,
 
