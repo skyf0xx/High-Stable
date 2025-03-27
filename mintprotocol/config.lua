@@ -5,7 +5,7 @@ local config = {}
 
 -- Token constants
 config.MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
-config.MINT_TESTNET_TOKEN = '_8pubNOSHLFNaSMHtCNIhFW68XUuLmwiH6ALHtNDzlQ'
+config.MINT_TESTNET_TOKEN = '7-N7TurGPjbG6tsVijXskYk-OwBbEpGH9o6h9y1dLXY' --'_8pubNOSHLFNaSMHtCNIhFW68XUuLmwiH6ALHtNDzlQ'
 
 -- Initialize configuration state from existing globals or use defaults
 config.AllowedTokensNames = config.AllowedTokensNames or {
@@ -36,9 +36,9 @@ config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
   ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = 'Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI', -- MINT/ NAB AMM -
   ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = 'mqJsHpuJLk77PB0pVCv47KqT3U_xY_ZHQQwHvzUAsWY', -- MINT/ AO AMM -
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY', -- MINT/ USDC AMM -
-  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'KwYRym6Oku73keCTMrMUFxXRPuDTsv_NFPsvzUJdtH0', -- Test Tube Token/ MINT Test token AMM -
+  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'HATiF_ca6ENn7aS5bcbkcZb7X5Nq_rhYJ7XE-YLYfuY', -- Test Tube Token/ MINT Test token AMM -
   ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] =
-  '19XoP5GdBe3FhfQdmfVaL59BJJG5gotCuSkkrlkQ9po'                                                    -- MATRIX/ MINT Test token AMM -
+  'pfRs0r3yAXR4Q9SuVMHjJadxyP9GseDRb_mkqCcIyBo'                                                    -- MATRIX/ MINT Test token AMM -
 
 }
 
@@ -49,8 +49,8 @@ config.LP_DECIMALS = config.LP_DECIMALS or {
   ['Lt0PKHQCFxXkXjJVd5CV2tRIlXe55hs4cQ8_OY9JgsI'] = 12,
   ['mqJsHpuJLk77PB0pVCv47KqT3U_xY_ZHQQwHvzUAsWY'] = 12,
   ['eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY'] = 12,
-  ['KwYRym6Oku73keCTMrMUFxXRPuDTsv_NFPsvzUJdtH0'] = 12,
-  ['19XoP5GdBe3FhfQdmfVaL59BJJG5gotCuSkkrlkQ9po'] = 12,
+  ['HATiF_ca6ENn7aS5bcbkcZb7X5Nq_rhYJ7XE-YLYfuY'] = 12,
+  ['pfRs0r3yAXR4Q9SuVMHjJadxyP9GseDRb_mkqCcIyBo'] = 12,
 }
 
 
