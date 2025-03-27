@@ -35,6 +35,10 @@ query.patterns = {
     return msg.Tags.Action == 'Get-Protocol-Metrics'
   end,
 
+  getPositionsForToken = function(msg)
+    return msg.Tags.Action == 'Get-Positions-For-Token'
+  end,
+
 }
 
 -- Handler implementations for query operations
@@ -434,6 +438,79 @@ query.handlers = {
       ['Timestamp'] = tostring(metrics.timestamp),
       ['MINT-Token'] = config.MINT_TOKEN,
       ['MINT-Testnet-Token'] = config.MINT_TESTNET_TOKEN
+    })
+  end,
+
+  getPositionsForToken = function(msg)
+    local token = msg.Tags['Token']
+
+    -- Validate token is allowed
+    security.assertTokenAllowed(token)
+
+    -- Get the corresponding AMM for this token
+    local amm = security.getAmmForToken(token)
+
+    -- Get the appropriate MINT token for this staked token
+    local mintToken = config.getMintTokenForStakedToken(token)
+
+    -- Get all staking positions for this token
+    local positions = {}
+    local stakingPositions = state.getStakingPositions()
+    local tokenTotal = '0'
+
+    if stakingPositions[token] then
+      for user, position in pairs(stakingPositions[token]) do
+        -- Only include positions with positive amounts
+        if position and utils.math.isPositive(position.amount) then
+          -- Format amounts for better readability
+          local formattedAmount = utils.formatTokenQuantity(position.amount, token, false)
+          local formattedLpTokens = utils.formatTokenQuantity(position.lpTokens, amm, true)
+          local formattedMintAmount = utils.formatTokenQuantity(position.mintAmount, mintToken, false)
+
+          -- Calculate time staked if available
+          local timeStaked = ''
+          if position.stakedDate then
+            local elapsedSeconds = utils.timeElapsedSince(position.stakedDate)
+            timeStaked = utils.formatDuration(elapsedSeconds * 1000) -- Convert to milliseconds
+          end
+
+          -- Add position to results
+          positions[user] = {
+            amount = position.amount,
+            formattedAmount = formattedAmount,
+            lpTokens = position.lpTokens,
+            formattedLpTokens = formattedLpTokens,
+            mintAmount = position.mintAmount,
+            formattedMintAmount = formattedMintAmount,
+            timeStaked = timeStaked
+          }
+
+          -- Add to total
+          tokenTotal = utils.math.add(tokenTotal, position.amount)
+        end
+      end
+    end
+
+    -- Count users with positions
+    local userCount = 0
+    for _ in pairs(positions) do
+      userCount = userCount + 1
+    end
+
+    -- Format the total
+    local formattedTotal = utils.formatTokenQuantity(tokenTotal, token, false)
+
+    -- Reply with all positions for this token
+    msg.reply({
+      Action = 'Positions-For-Token',
+      Token = token,
+      ['Token-Name'] = config.AllowedTokensNames[token],
+      Data = json.encode(positions),
+      ['User-Count'] = tostring(userCount),
+      ['Total-Staked'] = tokenTotal,
+      ['Formatted-Total-Staked'] = formattedTotal,
+      ['AMM'] = amm,
+      ['MINT-Token'] = mintToken
     })
   end
 }
