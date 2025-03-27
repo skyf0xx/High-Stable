@@ -339,6 +339,7 @@ stake.handlers = {
 
     local operationId = msg.Tags['X-Operation-Id']
     local operation = security.verifyOperation(operationId, 'stake', 'pending')
+    local refundQuantity = msg.Quantity
 
     -- Get the appropriate MINT token for this staked token
     local mintToken = config.getMintTokenForStakedToken(operation.token)
@@ -346,11 +347,17 @@ stake.handlers = {
     if (msg.From == mintToken) then
       return -- we are being refunded our own token
     end
+
     -- Verify we're getting refunded a legal token
     security.assertTokenAllowed(msg.From)
 
     -- Mark operation as failed (checks-effects-interactions pattern)
     operations.fail(operationId)
+
+    -- Ensure refund amount doesn't exceed original deposit
+    if utils.math.isGreaterThan(refundQuantity, operation.amount) then
+      refundQuantity = operation.amount
+    end
 
     -- Log the failed stake event
     utils.logEvent('StakeFailed', {
@@ -359,6 +366,7 @@ stake.handlers = {
       tokenName = config.AllowedTokensNames[operation.token],
       mintToken = mintToken,
       amount = operation.amount,
+      refundAmount = refundQuantity,
       error = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision',
       operationId = operationId
     })
@@ -366,12 +374,12 @@ stake.handlers = {
     -- Determine recipient based on token type
     local recipient = operation.token == mintToken and mintToken or operation.sender
 
-    -- Return the tokens
+    -- Return the tokens, capped at original amount
     Send({
       Target = operation.token,
       Action = 'Transfer',
       Recipient = recipient, --either the user or the treasury
-      Quantity = operation.amount,
+      Quantity = refundQuantity,
       ['X-Refund-Reason'] = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision'
     })
   end,
@@ -405,6 +413,11 @@ stake.handlers = {
     assert(msg.From == amm or msg.From == operation.token,
       'Unauthorized: refund not from recognized source')
 
+    -- Ensure refund amount doesn't exceed original deposit
+    if utils.math.isGreaterThan(quantity, operation.amount) then
+      quantity = operation.amount
+    end
+
     -- Refund the user
     Send({
       Target = token,
@@ -419,7 +432,8 @@ stake.handlers = {
     utils.logEvent('RefundProcessed', {
       sender = operation.sender,
       token = token,
-      amount = quantity,
+      originalAmount = operation.amount,
+      refundAmount = quantity,
       operationId = operationId
     })
   end
