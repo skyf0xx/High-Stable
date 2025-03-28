@@ -39,6 +39,10 @@ query.patterns = {
     return msg.Tags.Action == 'Get-Positions-For-Token'
   end,
 
+  getUserOperations = function(msg)
+    return msg.Tags.Action == 'Get-User-Operations'
+  end,
+
 }
 
 -- Handler implementations for query operations
@@ -511,6 +515,122 @@ query.handlers = {
       ['Formatted-Total-Staked'] = formattedTotal,
       ['AMM'] = amm,
       ['MINT-Token'] = mintToken
+    })
+  end,
+
+  -- Handler for getting all operations for an address
+  getUserOperations = function(msg)
+    local user = msg.Tags['User'] or msg.From
+    local statusFilter = msg.Tags['Status'] -- Optional filter by status
+    local tokenFilter = msg.Tags['Token']   -- Optional filter by token
+    local typeFilter = msg.Tags['Type']     -- Optional filter by operation type
+
+    -- Security check to prevent unauthorized access to other users' data
+    security.assertUserCanAccessPosition(user, msg.From)
+
+    local pendingOperations = state.getPendingOperations()
+    local userOperations = {}
+    local operationsByStatus = {
+      pending = {},
+      completed = {},
+      failed = {}
+    }
+
+    -- Gather all operations for the specified user
+    for opId, operation in pairs(pendingOperations) do
+      if operation.sender == user then
+        -- Apply filters if specified
+        local includeOperation = true
+
+        if statusFilter and operation.status ~= statusFilter then
+          includeOperation = false
+        end
+
+        if tokenFilter and operation.token ~= tokenFilter then
+          includeOperation = false
+        end
+
+        if typeFilter and operation.type ~= typeFilter then
+          includeOperation = false
+        end
+
+        if includeOperation then
+          -- Add formatted time
+          local formattedTime = utils.formatTimestamp(operation.timestamp)
+
+          -- Format data for better readability
+          local formattedOperation = {
+            id = operation.id,
+            type = operation.type,
+            token = operation.token,
+            tokenName = config.AllowedTokensNames[operation.token] or 'Unknown Token',
+            status = operation.status,
+            amount = operation.amount,
+            formattedAmount = utils.formatTokenQuantity(operation.amount or '0', operation.token, false),
+            timestamp = operation.timestamp,
+            formattedTime = formattedTime,
+            elapsedTime = utils.formatDuration(utils.timeElapsedSince(operation.timestamp) * 1000),
+            mintToken = operation.mintToken,
+            clientOperationId = operation.clientOperationId
+          }
+
+          -- Add operation to the appropriate status category
+          local status = operation.status or 'unknown'
+          operationsByStatus[status] = operationsByStatus[status] or {}
+          table.insert(operationsByStatus[status], formattedOperation)
+
+          -- Add to the main operations list
+          table.insert(userOperations, formattedOperation)
+        end
+      end
+    end
+
+    -- Sort operations by timestamp (newest first)
+    local function sortByTimestamp(a, b)
+      return (a.timestamp or 0) > (b.timestamp or 0)
+    end
+
+    table.sort(userOperations, sortByTimestamp)
+
+    -- Sort each status category by timestamp
+    for status, operations in pairs(operationsByStatus) do
+      table.sort(operations, sortByTimestamp)
+    end
+
+    -- Count operations by status
+    local counts = {
+      total = #userOperations,
+      pending = #(operationsByStatus.pending or {}),
+      completed = #(operationsByStatus.completed or {}),
+      failed = #(operationsByStatus.failed or {})
+    }
+
+    -- Safe JSON encoding with pcall
+    local success, encodedData = pcall(json.encode, userOperations)
+    local successByStatus, encodedDataByStatus = pcall(json.encode, operationsByStatus)
+
+    if not success or not successByStatus then
+      msg.reply({
+        Action = 'User-Operations-Error',
+        Error = 'JSON encoding error'
+      })
+      return
+    end
+
+    -- Reply with operations information
+    msg.reply({
+      Action = 'User-Operations',
+      User = user,
+      Data = encodedData,
+      DataByStatus = encodedDataByStatus,
+      ['Total-Operations'] = tostring(counts.total),
+      ['Pending-Operations'] = tostring(counts.pending),
+      ['Completed-Operations'] = tostring(counts.completed),
+      ['Failed-Operations'] = tostring(counts.failed),
+      ['Has-Filters'] = (statusFilter or tokenFilter or typeFilter) and 'true' or 'false',
+      ['Status-Filter'] = statusFilter or 'none',
+      ['Token-Filter'] = tokenFilter or 'none',
+      ['Type-Filter'] = typeFilter or 'none'
     })
   end
 }

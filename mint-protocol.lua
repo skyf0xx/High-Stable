@@ -32,6 +32,8 @@ Handlers.add('get-allowed-tokens', query.patterns.getAllowedTokens, query.handle
 Handlers.add('get-insurance-info', query.patterns.getInsuranceInfo, query.handlers.getInsuranceInfo)
 Handlers.add('get-protocol-metrics', query.patterns.getProtocolMetrics, query.handlers.getProtocolMetrics)
 Handlers.add('get-positions-for-token', query.patterns.getPositionsForToken, query.handlers.getPositionsForToken)
+Handlers.add('get-user-operations', query.patterns.getUserOperations, query.handlers.getUserOperations)
+
 
 
 -- Error handlers
