@@ -85,7 +85,8 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         Quantity = adjustedMintAmount, -- Use the original full amount for transfer
         ['X-Action'] = 'Provide',
         ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
-        ['X-Operation-Id'] = opId
+        ['X-Operation-Id'] = opId,
+        ['X-Client-Operation-ID'] = operation.clientOperationId
       })
 
       -- Transfer the user's token to the AMM
@@ -96,7 +97,8 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         Quantity = quantity,
         ['X-Action'] = 'Provide',
         ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
-        ['X-Operation-Id'] = opId
+        ['X-Operation-Id'] = opId,
+        ['X-Client-Operation-ID'] = operation.clientOperationId
       })
     else
       -- Not enough MINT in treasury, cancel the stake and refund the user
@@ -113,7 +115,8 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         requiredAmount = adjustedMintAmount,
         availableAmount = mintTreasuryBalance,
         operationId = opId,
-        maxLimit = maxAmount -- Add which max limit was applied
+        maxLimit = maxAmount, -- Add which max limit was applied
+        clientOperationId = operation.clientOperationId
       })
 
       -- Refund the user's tokens
@@ -126,7 +129,8 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         ['X-Error'] = 'Insufficient MINT balance in treasury',
         ['X-Required-Amount'] = adjustedMintAmount,
         ['X-Available-Amount'] = mintTreasuryBalance,
-        ['X-Operation-Id'] = opId
+        ['X-Operation-Id'] = opId,
+        ['X-Client-Operation-ID'] = operation.clientOperationId
       })
     end
   end)
@@ -174,6 +178,10 @@ stake.handlers = {
     local token = msg.From
     local quantity = msg.Quantity
     local sender = msg.Sender
+    local clientOperationId = msg.Tags['X-Client-Operation-ID'] -- Extract client operation ID
+
+    -- Verify client operation ID is provided
+    assert(clientOperationId ~= nil, 'Client Operation ID is required')
 
     -- Verify sender is an allowed token contract
     security.assertIsAllowedTokenProcess(token)
@@ -182,7 +190,9 @@ stake.handlers = {
     -- Get the corresponding AMM for this token
     local amm = security.getAmmForToken(token)
 
-    local opId, operation = operations.createOperation('stake', token, sender, quantity, amm)
+    -- Create operation with the client operation ID
+    local additionalFields = { clientOperationId = clientOperationId }
+    local opId, operation = operations.createOperation('stake', token, sender, quantity, amm, additionalFields)
 
     -- Log stake initiated
     utils.logEvent('StakeInitiated', {
@@ -190,7 +200,8 @@ stake.handlers = {
       token = token,
       tokenName = config.AllowedTokensNames[token],
       amount = quantity,
-      operationId = opId
+      operationId = opId,
+      clientOperationId = clientOperationId
     })
 
     -- Initialize staking position if it doesn't exist
@@ -234,7 +245,8 @@ stake.handlers = {
         mintAmount = mintAmount,
         adjustedMintAmount = adjustedMintAmount,
         mintReserve = mintReserve,
-        tokenReserve = tokenReserve
+        tokenReserve = tokenReserve,
+        clientOperationId = clientOperationId
       })
 
       fundStake(opId, token, quantity, amm, adjustedMintAmount)
@@ -305,7 +317,8 @@ stake.handlers = {
         tokenName = config.AllowedTokensNames[operation.token],
         mintToken = mintToken,
         initialPriceRatio = tokenPerMint,
-        sender = operation.sender
+        sender = operation.sender,
+        clientOperationId = operation.clientOperationId
       })
     end)
 
@@ -325,7 +338,8 @@ stake.handlers = {
       mintToken = mintToken,
       amount = msg.Tags['Provided-' .. usersToken],
       lpTokens = receivedLP,
-      operationId = operationId
+      operationId = operationId,
+      clientOperationId = operation.clientOperationId
     })
 
     -- Notify user of successful stake
@@ -336,7 +350,8 @@ stake.handlers = {
       TokenName = config.AllowedTokensNames[operation.token],
       Amount = msg.Tags['Provided-' .. usersToken],
       ['LP-Tokens'] = receivedLP,
-      ['MINT-Token'] = mintToken
+      ['MINT-Token'] = mintToken,
+      ['X-Client-Operation-ID'] = operation.clientOperationId
     })
   end,
 
@@ -375,7 +390,8 @@ stake.handlers = {
       amount = operation.amount,
       refundAmount = refundQuantity,
       error = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision',
-      operationId = operationId
+      operationId = operationId,
+      clientOperationId = operation.clientOperationId
     })
 
     -- Determine recipient based on token type
@@ -387,7 +403,8 @@ stake.handlers = {
       Action = 'Transfer',
       Recipient = recipient, --either the user or the treasury
       Quantity = refundQuantity,
-      ['X-Refund-Reason'] = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision'
+      ['X-Refund-Reason'] = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision',
+      ['X-Client-Operation-ID'] = operation.clientOperationId
     })
   end,
 
@@ -432,7 +449,8 @@ stake.handlers = {
       Recipient = operation.sender,
       Quantity = quantity,
       ['X-Operation-Id'] = operationId,
-      ['X-reason'] = 'Refund excess'
+      ['X-reason'] = 'Refund excess',
+      ['X-Client-Operation-ID'] = operation.clientOperationId
     })
 
     -- Log refund event
@@ -441,7 +459,8 @@ stake.handlers = {
       token = token,
       originalAmount = operation.amount,
       refundAmount = quantity,
-      operationId = operationId
+      operationId = operationId,
+      clientOperationId = operation.clientOperationId
     })
   end
 }
