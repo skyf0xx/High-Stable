@@ -574,6 +574,15 @@ query.handlers = {
             clientOperationId = operation.clientOperationId
           }
 
+          -- Add failure reason if operation failed
+          if operation.status == 'failed' then
+            formattedOperation.failureReason = operation.failureReason or 'Unknown error'
+            formattedOperation.failedAt = operation.failedAt
+            if operation.failedAt then
+              formattedOperation.formattedFailureTime = utils.formatTimestamp(operation.failedAt)
+            end
+          end
+
           -- Add operation to the appropriate status category
           local status = operation.status or 'unknown'
           operationsByStatus[status] = operationsByStatus[status] or {}

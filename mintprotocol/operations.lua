@@ -73,9 +73,9 @@ operations.complete = function(id)
   return state.completePendingOperation(id)
 end
 
--- Fail an operation
-operations.fail = function(id)
-  return state.failPendingOperation(id)
+-- Fail an operation with a reason
+operations.fail = function(id, reason)
+  return state.failPendingOperation(id, reason)
 end
 
 -- Get operation details

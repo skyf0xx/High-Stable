@@ -102,7 +102,7 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
       })
     else
       -- Not enough MINT in treasury, cancel the stake and refund the user
-      operations.fail(opId)
+      operations.fail(opId, 'Insufficient MINT balance in treasury')
 
       -- Log the failed stake event with which MINT token was used
       utils.logEvent('StakeFailed', {
@@ -374,7 +374,8 @@ stake.handlers = {
     security.assertTokenAllowed(msg.From)
 
     -- Mark operation as failed (checks-effects-interactions pattern)
-    operations.fail(operationId)
+    local errorReason = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision'
+    operations.fail(operationId, errorReason)
 
     -- Ensure refund amount doesn't exceed original deposit
     if utils.math.isGreaterThan(refundQuantity, operation.amount) then

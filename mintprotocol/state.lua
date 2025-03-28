@@ -139,12 +139,14 @@ function state.completePendingOperation(id)
 end
 
 -- Fail a pending operation
-function state.failPendingOperation(id)
+function state.failPendingOperation(id, reason)
   if not PendingOperations[id] then
     return false
   end
 
   PendingOperations[id].status = 'failed'
+  PendingOperations[id].failureReason = reason or 'Unknown error'
+  PendingOperations[id].failedAt = os.time()
   return true
 end
 
