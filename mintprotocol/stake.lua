@@ -56,8 +56,14 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
       '100'
     )
 
-    -- Fixed maximum amount (in MINT)
-    local maxAmount = '50000' -- 50,000 MINT tokens
+    -- Fixed maximum amount (in MINT) based on which MINT token we're using
+    local maxAmount
+    if mintToken == config.MINT_TESTNET_TOKEN then
+      maxAmount = '100000000' -- 100,000,000 for testnet MINT tokens
+    else
+      maxAmount = '50000'     -- 50,000 for main MINT tokens
+    end
+
     -- We're working with the integer part now, so no need to adjust for decimals
     local fixedMaxAmount = maxAmount
 
@@ -96,7 +102,7 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
       -- Not enough MINT in treasury, cancel the stake and refund the user
       operations.fail(opId)
 
-      -- Log the failed stake event
+      -- Log the failed stake event with which MINT token was used
       utils.logEvent('StakeFailed', {
         sender = operation.sender,
         token = token,
@@ -106,7 +112,8 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         error = 'Insufficient MINT balance in treasury',
         requiredAmount = adjustedMintAmount,
         availableAmount = mintTreasuryBalance,
-        operationId = opId
+        operationId = opId,
+        maxLimit = maxAmount -- Add which max limit was applied
       })
 
       -- Refund the user's tokens
