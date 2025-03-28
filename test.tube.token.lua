@@ -24,7 +24,6 @@ local bint = require('.bint')(256)
 ]]
 --
 local json = require('json')
---local randomModule = require('random')(json)
 
 --[[
   utils helper functions to remove the bint complexity.
@@ -295,7 +294,7 @@ end)
 ]] --
 Handlers.add('faucet', Handlers.utils.hasMatchingTag('Action', 'Faucet'), function(msg)
   local recipient = msg.Tags.Recipient or msg.From
-  local quantity = msg.Tags.Quantity or utils.toBalanceValue((1000 * 10 ^ Denomination))
+  local quantity = msg.Tags.Quantity or utils.toBalanceValue((100 * 10 ^ Denomination))
   assert(bint.__lt(0, bint(quantity)), 'Quantity must be greater than 0')
 
   Send({

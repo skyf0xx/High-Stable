@@ -3,7 +3,7 @@ Handlers.add('check-maintenance',
   Handlers.utils.hasMatchingTag('Action', 'Check-Maintenance'),
   function(msg)
     msg.reply({
-      Data = 'false'
+      Data = 'true'
     })
   end
 )

@@ -25,11 +25,9 @@ mint.lua --> "MINT" (SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0)
 mint.policy.lua --> "MINT Policy" (KBOfQGUj-K1GNwfx1CeMSZxxcj5p837d-_6hTmkWF0k)
 mint-protocol.lua --> "MINT Protocol" (lNtrei6YLQiWS8cyFFHDrOBvRzICQPTvrjZBP8fz-ZI)
 
-
 OPERATIONS
 maintenance.lua --> "Maintenance" (SpkZWLmuKAQ3vIK_1ErUndUxA372HxPtB5ncxa2V9VM)
 airdrop.lua --> "NAB Airdropper" ( WWPYXeDnKggZ1At-AYMaoKmay8e7P2jot_lkL8aZVeE)
-mint-protocol.maintenance.lua "MINT Protocol Maintenance" (ZT37FSfc486FCWTrO8dQ6E24iX0IhRlTy88OvsO-NM4)
 
 TEST TUBE
 test.tube.token.lua --> "Test Tube Token" (U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A)
