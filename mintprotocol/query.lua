@@ -523,7 +523,8 @@ query.handlers = {
     local user = msg.Tags['User'] or msg.From
     local statusFilter = msg.Tags['Status'] -- Optional filter by status
     local tokenFilter = msg.Tags['Token']   -- Optional filter by token
-    local typeFilter = msg.Tags['Type']     -- Optional filter by operation type
+    local typeFilter = msg.Tags['OP-Type']  -- Optional filter by operation type
+
 
 
     local pendingOperations = state.getPendingOperations()
