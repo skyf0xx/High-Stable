@@ -61,7 +61,7 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
     if mintToken == config.MINT_TESTNET_TOKEN then
       maxAmount = '100000000' -- 100,000,000 for testnet MINT tokens
     else
-      maxAmount = '50000'     -- 50,000 for main MINT tokens
+      maxAmount = '100000'    -- 100,000 for main MINT tokens
     end
 
     -- We're working with the integer part now, so no need to adjust for decimals
