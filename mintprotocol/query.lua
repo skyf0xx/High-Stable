@@ -525,8 +525,6 @@ query.handlers = {
     local tokenFilter = msg.Tags['Token']   -- Optional filter by token
     local typeFilter = msg.Tags['Type']     -- Optional filter by operation type
 
-    -- Security check to prevent unauthorized access to other users' data
-    security.assertUserCanAccessPosition(user, msg.From)
 
     local pendingOperations = state.getPendingOperations()
     local userOperations = {}
