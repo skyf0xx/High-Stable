@@ -27,6 +27,8 @@ mint-protocol.lua --> "MINT Protocol" (lNtrei6YLQiWS8cyFFHDrOBvRzICQPTvrjZBP8fz-
 
 OPERATIONS
 maintenance.lua --> "Maintenance" (SpkZWLmuKAQ3vIK_1ErUndUxA372HxPtB5ncxa2V9VM)
+mint-protocol.maintenance.lua  "MINT Protocol Maintenance" (ZT37FSfc486FCWTrO8dQ6E24iX0IhRlTy88OvsO-NM4)
+
 airdrop.lua --> "NAB Airdropper" ( WWPYXeDnKggZ1At-AYMaoKmay8e7P2jot_lkL8aZVeE)
 
 TEST TUBE
