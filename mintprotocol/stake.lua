@@ -102,7 +102,29 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
       })
     else
       -- Not enough MINT in treasury, cancel the stake and refund the user
-      operations.fail(opId, 'Insufficient MINT balance in treasury')
+      local function formatMintAmount(amount)
+        local formatted = tostring(amount)
+        local k = 1
+        while k ~= 0 do
+          formatted, k = string.gsub(formatted, '^(-?%d+)(%d%d%d)', '%1,%2')
+        end
+        return formatted
+      end
+
+      -- Then in the error message section:
+      local errorReason
+      if not utils.math.isLessThan(trimmedAdjustedAmount, threshold) then
+        errorReason = string.format(
+          'Stake amount exceeds maximum allowed (%s MINT). Please try staking a smaller amount or split your stake into multiple transactions.',
+          formatMintAmount(threshold))
+      elseif not utils.math.isLessThan(trimmedAdjustedAmount, trimmedBalance) then
+        errorReason = string.format(
+          'Stake requires %s MINT but treasury only has %s available. Please try a smaller amount or try again later when treasury is replenished.',
+          formatMintAmount(trimmedAdjustedAmount), formatMintAmount(trimmedBalance))
+      else
+        errorReason = 'Insufficient MINT balance in treasury for this stake'
+      end
+      operations.fail(opId, errorReason)
 
       -- Log the failed stake event with which MINT token was used
       utils.logEvent('StakeFailed', {
