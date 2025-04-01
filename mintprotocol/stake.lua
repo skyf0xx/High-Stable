@@ -87,19 +87,41 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
         ['X-Operation-Id'] = opId,
         ['X-Client-Operation-ID'] = operation.clientOperationId
-      })
+      }).onReply(function(reply)
+        -- Check if the transfer was successful
+        if reply.Action == 'Transfer-Error' then
+          -- MINT transfer failed, fail the operation
+          local errorReason = reply.Error or 'Failed to transfer MINT tokens from treasury'
+          operations.fail(opId, errorReason)
 
-      -- Transfer the user's token to the AMM
-      Send({
-        Target = token,
-        Action = 'Transfer',
-        Recipient = amm,
-        Quantity = quantity,
-        ['X-Action'] = 'Provide',
-        ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
-        ['X-Operation-Id'] = opId,
-        ['X-Client-Operation-ID'] = operation.clientOperationId
-      })
+          -- Log the failed stake event
+          utils.logEvent('StakeFailed', {
+            sender = operation.sender,
+            token = token,
+            tokenName = config.AllowedTokensNames[token],
+            mintToken = mintToken,
+            amount = quantity,
+            error = errorReason,
+            operationId = opId,
+            clientOperationId = operation.clientOperationId
+          })
+
+          -- No need to transfer user's tokens since the operation failed
+          return
+        end
+
+        -- If we get here, MINT transfer was successful, now transfer the user's tokens
+        Send({
+          Target = token,
+          Action = 'Transfer',
+          Recipient = amm,
+          Quantity = quantity,
+          ['X-Action'] = 'Provide',
+          ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+          ['X-Operation-Id'] = opId,
+          ['X-Client-Operation-ID'] = operation.clientOperationId
+        })
+      end)
     else
       -- Not enough MINT in treasury, cancel the stake and refund the user
       local function formatMintAmount(amount)
