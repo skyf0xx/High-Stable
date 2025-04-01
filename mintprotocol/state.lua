@@ -11,6 +11,29 @@ local state = {}
 IsPaused = IsPaused or false
 StakingPositions = StakingPositions or {}
 PendingOperations = PendingOperations or {}
+StakingLocks = StakingLocks or {}
+
+-- Add these functions to the state module
+function state.isTokenLocked(token)
+  return StakingLocks[token] and true or false
+end
+
+function state.lockTokenForStaking(token, sender, operationId, clientOperationId)
+  StakingLocks[token] = {
+    lockedBy = sender,
+    lockedAt = os.time(),
+    operationId = operationId,
+    clientOperationId = clientOperationId
+  }
+end
+
+function state.unlockTokenForStaking(token)
+  StakingLocks[token] = nil
+end
+
+function state.getTokenLockInfo(token)
+  return StakingLocks[token]
+end
 
 -- Initialize state variables
 function state.updateAllowedTokens()
