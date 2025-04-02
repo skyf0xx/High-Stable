@@ -1,5 +1,6 @@
 local bint = require('.bint')(256)
 local MonetaryPolicyProcess = 'KBOfQGUj-K1GNwfx1CeMSZxxcj5p837d-_6hTmkWF0k'
+local MINT_PROTOCOL_PROCESS = 'lNtrei6YLQiWS8cyFFHDrOBvRzICQPTvrjZBP8fz-ZI'
 
 
 --[[
@@ -274,42 +275,27 @@ end)
 Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(msg)
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
   assert(bint(0) < bint(msg.Quantity), 'Quantity must be greater than zero!')
+  assert(msg.From == ao.id or msg.From == MINT_PROTOCOL_PROCESS,
+    'Only authorized processes can mint new ' .. Ticker .. ' tokens!')
 
   if not Balances[ao.id] then Balances[ao.id] = '0' end
 
-  if msg.From == ao.id then
-    -- Convert the token quantity to gons before adding to balance
-    local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
+  -- Convert the token quantity to gons before adding to balance
+  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
 
-    -- Add gons to the token pool, according to Quantity
-    Balances[msg.From] = utils.add(Balances[msg.From], gonQuantity)
-    TotalSupply = utils.add(TotalSupply, msg.Quantity)
+  -- Add gons to the token pool, according to Quantity
+  Balances[msg.From] = utils.add(Balances[msg.From], gonQuantity)
+  TotalSupply = utils.add(TotalSupply, msg.Quantity)
 
-    if msg.reply then
-      msg.reply({
-        Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
-      })
-    else
-      Send({
-        Target = msg.From,
-        Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
-      })
-    end
+  if msg.reply then
+    msg.reply({
+      Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
+    })
   else
-    if msg.reply then
-      msg.reply({
-        Action = 'Mint-Error',
-        ['Message-Id'] = msg.Id,
-        Error = 'Only the Process Id can mint new ' .. Ticker .. ' tokens!'
-      })
-    else
-      Send({
-        Target = msg.From,
-        Action = 'Mint-Error',
-        ['Message-Id'] = msg.Id,
-        Error = 'Only the Process Id can mint new ' .. Ticker .. ' tokens!'
-      })
-    end
+    Send({
+      Target = msg.From,
+      Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
+    })
   end
 end)
 
