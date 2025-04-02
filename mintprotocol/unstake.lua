@@ -107,6 +107,27 @@ local function calculateRebasedMintAmount(initialAmount, stakedDate, currentDate
   return rebasedAmount
 end
 
+-- Helper function to burn remaining MINT tokens after profit distribution
+local function burnRemainingMintTokens(mintToken, remainingAmount, operation)
+  -- Only burn if this is the main MINT token, not testnet MINT
+  if mintToken == config.MINT_TOKEN and utils.math.isPositive(remainingAmount) then
+    utils.logEvent('BurningRemainingMint', {
+      mintToken = mintToken,
+      amount = remainingAmount,
+      operationId = operation.id,
+      sender = operation.sender
+    })
+
+    Send({
+      Target = mintToken,
+      Action = 'Burn',
+      Quantity = remainingAmount,
+      ['X-Operation-Id'] = operation.id,
+      ['X-Reason'] = 'Unused MINT tokens from unstaking'
+    })
+  end
+end
+
 -- Helper function to handle MINT token profit sharing with rebasing adjustments
 local function handleMintTokenProfitSharing(tokenData, operation)
   -- Get the appropriate MINT token for this staked token
