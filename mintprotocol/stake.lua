@@ -24,7 +24,7 @@ local function trimToIntegerPart(stringNumber, decimalPlaces)
   return string.sub(stringNumber, 1, #stringNumber - decimalPlaces)
 end
 
-local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
+local function fundTestStake(opId, token, quantity, amm, adjustedMintAmount)
   -- Verify operation exists and is in pending state
   security.verifyOperation(opId, 'stake', 'pending')
 
@@ -57,18 +57,165 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
     )
 
     -- Fixed maximum amount (in MINT) based on which MINT token we're using
-    local maxAmount
-    if mintToken == config.MINT_TESTNET_TOKEN then
-      maxAmount = '100000000' -- 100,000,000 for testnet MINT tokens
-    else
-      maxAmount = '100000'    -- 100,000 for main MINT tokens
-    end
+    local maxAmount = '100000000' -- 100,000,000 for testnet MINT tokens
+
 
     -- We're working with the integer part now, so no need to adjust for decimals
     local fixedMaxAmount = maxAmount
 
     -- Use the smaller of the two thresholds
     local threshold = utils.math.isLessThan(percentageBased, fixedMaxAmount)
+      and percentageBased
+      or fixedMaxAmount
+
+    -- Check if requested amount is below threshold and treasury has sufficient balance
+    if utils.math.isLessThan(trimmedAdjustedAmount, threshold) and
+      utils.math.isLessThan(trimmedAdjustedAmount, trimmedBalance) then
+      -- Proceed with funding the stake
+
+      -- Transfer MINT to the AMM from our treasury
+      Send({
+        Target = mintToken,
+        Action = 'Transfer',
+        Recipient = amm,
+        Quantity = adjustedMintAmount, -- Use the original full amount for transfer
+        ['X-Action'] = 'Provide',
+        ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+        ['X-Operation-Id'] = opId,
+        ['X-Client-Operation-ID'] = operation.clientOperationId
+      }).onReply(function(reply)
+        -- Check if the transfer was successful
+        if reply.Action == 'Transfer-Error' then
+          -- MINT transfer failed, fail the operation
+          local errorReason = reply.Error or 'Failed to transfer MINT tokens from treasury'
+          operations.fail(opId, errorReason)
+
+          -- Log the failed stake event
+          utils.logEvent('StakeFailed', {
+            sender = operation.sender,
+            token = token,
+            tokenName = config.AllowedTokensNames[token],
+            mintToken = mintToken,
+            amount = quantity,
+            error = errorReason,
+            operationId = opId,
+            clientOperationId = operation.clientOperationId
+          })
+
+          -- No need to transfer user's tokens since the operation failed
+          return
+        end
+
+        -- If we get here, MINT transfer was successful, now transfer the user's tokens
+        Send({
+          Target = token,
+          Action = 'Transfer',
+          Recipient = amm,
+          Quantity = quantity,
+          ['X-Action'] = 'Provide',
+          ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+          ['X-Operation-Id'] = opId,
+          ['X-Client-Operation-ID'] = operation.clientOperationId
+        })
+      end)
+    else
+      -- Not enough MINT in treasury, cancel the stake and refund the user
+      local function formatMintAmount(amount)
+        local formatted = tostring(amount)
+        local k = 1
+        while k ~= 0 do
+          formatted, k = string.gsub(formatted, '^(-?%d+)(%d%d%d)', '%1,%2')
+        end
+        return formatted
+      end
+
+      -- Then in the error message section:
+      local errorReason
+      if not utils.math.isLessThan(trimmedAdjustedAmount, threshold) then
+        errorReason = string.format(
+          'Stake amount exceeds maximum allowed (%s MINT). Please try staking a smaller amount or split your stake into multiple transactions.',
+          formatMintAmount(threshold))
+      elseif not utils.math.isLessThan(trimmedAdjustedAmount, trimmedBalance) then
+        errorReason = string.format(
+          'Stake requires %s MINT but treasury only has %s available. Please try a smaller amount or try again later when treasury is replenished.',
+          formatMintAmount(trimmedAdjustedAmount), formatMintAmount(trimmedBalance))
+      else
+        errorReason = 'Insufficient MINT balance in treasury for this stake'
+      end
+      operations.fail(opId, errorReason)
+
+      -- Log the failed stake event with which MINT token was used
+      utils.logEvent('StakeFailed', {
+        sender = operation.sender,
+        token = token,
+        tokenName = config.AllowedTokensNames[token],
+        mintToken = mintToken,
+        amount = quantity,
+        error = 'Insufficient MINT balance in treasury',
+        requiredAmount = adjustedMintAmount,
+        availableAmount = mintTreasuryBalance,
+        operationId = opId,
+        maxLimit = maxAmount, -- Add which max limit was applied
+        clientOperationId = operation.clientOperationId
+      })
+
+      -- Refund the user's tokens
+      Send({
+        Target = token,
+        Action = 'Transfer',
+        Recipient = operation.sender,
+        Quantity = quantity,
+        ['X-Refund-Reason'] = 'Insufficient MINT balance in treasury',
+        ['X-Error'] = 'Insufficient MINT balance in treasury',
+        ['X-Required-Amount'] = adjustedMintAmount,
+        ['X-Available-Amount'] = mintTreasuryBalance,
+        ['X-Operation-Id'] = opId,
+        ['X-Client-Operation-ID'] = operation.clientOperationId
+      })
+    end
+  end)
+end
+
+local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
+  -- Verify operation exists and is in pending state
+  security.verifyOperation(opId, 'stake', 'pending')
+
+  -- Get the appropriate MINT token for this staked token
+  local mintToken = config.getMintTokenForStakedToken(token)
+
+  -- Get the operation details
+  local operation = operations.get(opId)
+
+  -- Check MINT balance in treasury
+  Send({
+    Target = mintToken,
+    Action = 'Balance',
+    Recipient = ao.id -- The contract itself acts as the treasury
+  }).onReply(function(balanceReply)
+    local mintTreasuryBalance   = balanceReply.Balance or '0'
+
+    -- Get the number of decimal places for the MINT token
+    local mintDecimals          = config.TOKEN_DECIMALS[mintToken]
+
+    -- Trim the balance and adjusted amount to integer parts
+    local trimmedBalance        = trimToIntegerPart(mintTreasuryBalance, mintDecimals)
+    local trimmedAdjustedAmount = trimToIntegerPart(adjustedMintAmount, mintDecimals)
+
+    -- Calculate threshold based on percentage of treasury
+    local percentThreshold      = '10' -- 10% of treasury
+    local percentageBased       = utils.math.divide(
+      utils.math.multiply(trimmedBalance, percentThreshold),
+      '100'
+    )
+
+    -- Fixed maximum amount (in MINT) based on which MINT token we're using
+    local maxAmount             = '100000' -- 100,000 for main MINT tokens
+
+    -- We're working with the integer part now, so no need to adjust for decimals
+    local fixedMaxAmount        = maxAmount
+
+    -- Use the smaller of the two thresholds
+    local threshold             = utils.math.isLessThan(percentageBased, fixedMaxAmount)
       and percentageBased
       or fixedMaxAmount
 
@@ -332,7 +479,12 @@ stake.handlers = {
         clientOperationId = clientOperationId
       })
 
-      fundStake(opId, token, quantity, amm, adjustedMintAmount)
+      -- Call the appropriate funding function based on mintToken
+      if mintToken == config.MINT_TESTNET_TOKEN then
+        fundTestStake(opId, token, quantity, amm, adjustedMintAmount)
+      else
+        fundStake(opId, token, quantity, amm, adjustedMintAmount)
+      end
     end)
   end,
 
