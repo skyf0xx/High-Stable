@@ -87,19 +87,41 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
         ['X-Operation-Id'] = opId,
         ['X-Client-Operation-ID'] = operation.clientOperationId
-      })
+      }).onReply(function(reply)
+        -- Check if the transfer was successful
+        if reply.Action == 'Transfer-Error' then
+          -- MINT transfer failed, fail the operation
+          local errorReason = reply.Error or 'Failed to transfer MINT tokens from treasury'
+          operations.fail(opId, errorReason)
 
-      -- Transfer the user's token to the AMM
-      Send({
-        Target = token,
-        Action = 'Transfer',
-        Recipient = amm,
-        Quantity = quantity,
-        ['X-Action'] = 'Provide',
-        ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
-        ['X-Operation-Id'] = opId,
-        ['X-Client-Operation-ID'] = operation.clientOperationId
-      })
+          -- Log the failed stake event
+          utils.logEvent('StakeFailed', {
+            sender = operation.sender,
+            token = token,
+            tokenName = config.AllowedTokensNames[token],
+            mintToken = mintToken,
+            amount = quantity,
+            error = errorReason,
+            operationId = opId,
+            clientOperationId = operation.clientOperationId
+          })
+
+          -- No need to transfer user's tokens since the operation failed
+          return
+        end
+
+        -- If we get here, MINT transfer was successful, now transfer the user's tokens
+        Send({
+          Target = token,
+          Action = 'Transfer',
+          Recipient = amm,
+          Quantity = quantity,
+          ['X-Action'] = 'Provide',
+          ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+          ['X-Operation-Id'] = opId,
+          ['X-Client-Operation-ID'] = operation.clientOperationId
+        })
+      end)
     else
       -- Not enough MINT in treasury, cancel the stake and refund the user
       local function formatMintAmount(amount)
@@ -212,9 +234,50 @@ stake.handlers = {
     -- Get the corresponding AMM for this token
     local amm = security.getAmmForToken(token)
 
-    -- Create operation with the client operation ID
+    -- Create operation with the client operation ID first
     local additionalFields = { clientOperationId = clientOperationId }
     local opId, operation = operations.createOperation('stake', token, sender, quantity, amm, additionalFields)
+
+    -- Check if token is currently locked for staking
+    if state.isTokenLocked(token) then
+      local lockInfo = state.getTokenLockInfo(token)
+      local lockDuration = os.time() - lockInfo.lockedAt
+      local errorReason = 'Token is currently being staked by another user'
+
+      -- Fail the operation
+      operations.fail(opId, errorReason)
+
+      -- Log the rejection due to lock
+      utils.logEvent('StakeRejectedDueToLock', {
+        sender = sender,
+        token = token,
+        tokenName = config.AllowedTokensNames[token],
+        amount = quantity,
+        lockedBy = lockInfo.lockedBy,
+        lockDuration = lockDuration,
+        operationId = opId,
+        clientOperationId = clientOperationId,
+        status = 'failed',
+        error = errorReason
+      })
+
+      -- Refund the tokens to the user with a friendly message
+      Send({
+        Target = token,
+        Action = 'Transfer',
+        Recipient = sender,
+        Quantity = quantity,
+        ['X-Refund-Reason'] = errorReason,
+        ['X-Error'] = 'Please try again in a few moments',
+        ['X-Client-Operation-ID'] = clientOperationId,
+        ['X-Operation-Id'] = opId
+      })
+
+      return
+    end
+
+    -- Lock the token for staking
+    state.lockTokenForStaking(token, sender, opId, clientOperationId)
 
     -- Log stake initiated
     utils.logEvent('StakeInitiated', {
@@ -229,7 +292,6 @@ stake.handlers = {
     -- Initialize staking position if it doesn't exist
     state.initializeStakingPosition(token, sender)
 
-    -- Query AMM for swap output to determine MINT amount needed
     -- Query AMM for current reserves to calculate MINT amount needed
     Send({
       Target = amm,
@@ -241,7 +303,6 @@ stake.handlers = {
       -- Get reserves for both tokens
       local mintReserve = reply.Tags[mintToken]
       local tokenReserve = reply.Tags[token]
-
 
       -- Calculate MINT amount based on current price ratio
       local mintAmount
@@ -352,6 +413,9 @@ stake.handlers = {
       status = 'completed'
     })
 
+    -- Unlock the token for staking
+    state.unlockTokenForStaking(operation.token)
+
     -- Log the successful stake event
     utils.logEvent('StakeComplete', {
       sender = operation.sender,
@@ -398,6 +462,9 @@ stake.handlers = {
     -- Mark operation as failed (checks-effects-interactions pattern)
     local errorReason = msg.Tags['X-Refund-Reason'] or 'Unknown error during liquidity provision'
     operations.fail(operationId, errorReason)
+
+    -- Unlock the token for staking
+    state.unlockTokenForStaking(operation.token)
 
     -- Ensure refund amount doesn't exceed original deposit
     if utils.math.isGreaterThan(refundQuantity, operation.amount) then

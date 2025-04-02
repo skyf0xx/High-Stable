@@ -118,6 +118,33 @@ operations.countByStatus = function(status)
   return count
 end
 
+operations.cleanStaleLocks = function()
+  local now = os.time()
+  local staleLockTimeout = 600 -- 10 minutes in seconds
+  local unlockedTokens = {}
+
+  -- Check each locked token
+  for token, lockInfo in pairs(StakingLocks or {}) do
+    if (now - lockInfo.lockedAt) > staleLockTimeout then
+      -- This is a stale lock that needs to be cleaned up
+      state.unlockTokenForStaking(token)
+      table.insert(unlockedTokens, token)
+
+      utils.logEvent('StaleLockRemoved', {
+        token = token,
+        tokenName = config.AllowedTokensNames[token],
+        lockedBy = lockInfo.lockedBy,
+        lockedAt = lockInfo.lockedAt,
+        duration = now - lockInfo.lockedAt,
+        operationId = lockInfo.operationId,
+        clientOperationId = lockInfo.clientOperationId
+      })
+    end
+  end
+
+  return unlockedTokens
+end
+
 -- Handler implementations
 operations.handlers = {
   -- Handler for cleanup operation
@@ -125,8 +152,11 @@ operations.handlers = {
     security.assertIsAuthorized(msg.From)
 
     local startCount = state.countPendingOperations()
-
     local removedCount = operations.cleanStaleOperations()
+
+    -- Also clean up stale locks
+    local unlockedTokens = operations.cleanStaleLocks()
+    local unlockedCount = #unlockedTokens
 
     local endCount = state.countPendingOperations()
 
@@ -134,12 +164,14 @@ operations.handlers = {
       caller = msg.From,
       operationsBeforeCleanup = startCount,
       operationsAfterCleanup = endCount,
-      operationsRemoved = removedCount
+      operationsRemoved = removedCount,
+      locksRemoved = unlockedCount
     })
 
     msg.reply({
       Action = 'Cleanup-Complete',
       ['Operations-Removed'] = tostring(removedCount),
+      ['Locks-Removed'] = tostring(unlockedCount),
       ['Timestamp'] = tostring(os.time())
     })
   end

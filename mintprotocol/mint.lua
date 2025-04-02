@@ -220,7 +220,7 @@ Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), fu
       end
 
       -- Send Debit-Notice and Credit-Notice
-      Send(debitNotice)
+      msg.reply(debitNotice)
       Send(creditNotice)
     end
   else

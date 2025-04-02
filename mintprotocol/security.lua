@@ -210,4 +210,18 @@ security.validateNoTokenMixing = function(operation)
   return true
 end
 
+-- Check if token is locked and assert if it is
+security.assertTokenNotLocked = function(token)
+  assert(not state.isTokenLocked(token),
+    'Token is currently being staked by another user. Please try again in a few moments.')
+end
+
+-- Check if lock belongs to sender
+security.assertLockBelongsToSender = function(token, sender)
+  if state.isTokenLocked(token) then
+    local lockInfo = state.getTokenLockInfo(token)
+    assert(lockInfo.lockedBy == sender, 'Token is locked by a different user')
+  end
+end
+
 return security
