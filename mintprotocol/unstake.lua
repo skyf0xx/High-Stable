@@ -136,7 +136,7 @@ local function handleMintTokenProfitSharing(tokenData, operation)
   -- If initial amount is zero or withdrawnMintToken is less than or equal to zero, there's no profit
   if utils.math.isZero(tokenData.initialMintTokenAmount) or
     not utils.math.isPositive(tokenData.withdrawnMintToken) then
-    return '0' -- No profit to share
+    return '0', '0' -- No profit to share, no remaining tokens
   end
 
   -- Calculate what the initial amount would be worth now, after rebasing
@@ -149,7 +149,7 @@ local function handleMintTokenProfitSharing(tokenData, operation)
 
   -- If withdrawn amount is less than the rebased initial amount, there's no profit
   if utils.math.isLessThan(tokenData.withdrawnMintToken, rebasedInitialAmount) then
-    return '0'
+    return '0', tokenData.withdrawnMintToken -- No profit, all tokens are remaining
   end
 
   -- Calculate actual profit by comparing withdrawn amount to rebased initial amount
@@ -187,7 +187,9 @@ local function handleMintTokenProfitSharing(tokenData, operation)
     operationId = operation.id
   })
 
-  return userShare
+  local remainingMint = utils.math.subtract(tokenData.withdrawnMintToken, userShare)
+
+  return userShare, remainingMint
 end
 
 
@@ -251,10 +253,15 @@ local function processUnstake(operationId)
 
   -- Mark operation as completed (checks-effects-interactions)
   operations.complete(operationId)
+
   -- Process impermanent loss and profit sharing
   local ilAmount = impermanent_loss.processCompensation(tokenData, operation)
   local userTokenResults = handleUserTokenProfitSharing(tokenData, operation)
-  local mintProfitShare = handleMintTokenProfitSharing(tokenData, operation)
+  local mintProfitShare, remainingMint = handleMintTokenProfitSharing(tokenData, operation)
+
+  -- Burn remaining MINT tokens if appropriate
+  burnRemainingMintTokens(mintToken, remainingMint, operation)
+
   -- Send tokens and notify user
   local results = {
     amountToSendUser = userTokenResults.amountToSendUser,
@@ -262,7 +269,9 @@ local function processUnstake(operationId)
     feeShareAmount = userTokenResults.feeShareAmount,
     mintProfitShare = mintProfitShare
   }
+
   sendTokensAndNotify(operation, tokenData, results)
+
   -- Log unstake completed
   utils.logEvent('UnstakeComplete', {
     sender = operation.sender,
