@@ -149,7 +149,7 @@ local function handleMintTokenProfitSharing(tokenData, operation)
     Quantity = userShare,
     ['X-MINT-Profit-Share'] = 'true',
     ['X-Operation-Id'] = operation.id,
-    ['X-Rebased-Initial-Amount'] = rebasedInitialAmount -- Add this for transparency
+    ['X-Rebased-Initial-Amount'] = rebasedInitialAmount
   })
 
   -- Log MINT profit sharing with rebasing info
@@ -247,7 +247,7 @@ local function processUnstake(operationId)
     sender = operation.sender,
     token = operation.token,
     tokenName = config.AllowedTokensNames[operation.token],
-    mintToken = mintToken, -- Log which MINT token was used
+    mintToken = mintToken,
     initialAmount = tokenData.initialUserTokenAmount,
     withdrawnAmount = tokenData.withdrawnUserToken,
     lpTokensBurned = tokenData.burnedLpTokens,
