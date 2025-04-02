@@ -103,6 +103,7 @@ local function fundTestStake(opId, token, quantity, amm, adjustedMintAmount)
           })
 
           -- No need to transfer user's tokens since the operation failed
+          state.unlockTokenForStaking(token)
           return
         end
 
@@ -309,6 +310,7 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         maxLimit = maxAmount, -- Add which max limit was applied
         clientOperationId = operation.clientOperationId
       })
+        state.unlockTokenForStaking(token)
 
       -- Refund the user's tokens
       Send({
