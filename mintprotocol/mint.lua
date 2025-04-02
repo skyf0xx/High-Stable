@@ -277,14 +277,14 @@ Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(m
   assert(bint(0) < bint(msg.Quantity), 'Quantity must be greater than zero!')
   assert(msg.From == ao.id or msg.From == MINT_PROTOCOL_PROCESS,
     'Only authorized processes can mint new ' .. Ticker .. ' tokens!')
-
-  if not Balances[ao.id] then Balances[ao.id] = '0' end
+  local recipient = msg.From
+  if not Balances[recipient] then Balances[recipient] = '0' end
 
   -- Convert the token quantity to gons before adding to balance
   local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
 
   -- Add gons to the token pool, according to Quantity
-  Balances[msg.From] = utils.add(Balances[msg.From], gonQuantity)
+  Balances[recipient] = utils.add(Balances[recipient], gonQuantity)
   TotalSupply = utils.add(TotalSupply, msg.Quantity)
 
   if msg.reply then
@@ -293,7 +293,7 @@ Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(m
     })
   else
     Send({
-      Target = msg.From,
+      Target = recipient,
       Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
     })
   end
