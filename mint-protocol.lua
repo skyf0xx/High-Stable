@@ -30,7 +30,6 @@ Handlers.add('token-receipt', unstake.patterns.tokenReceipt, unstake.handlers.to
 
 -- Rewards handlers
 Handlers.add('request-rewards', rewards.patterns.requestRewards, rewards.handlers.requestRewards)
-Handlers.add('update-token-weights', rewards.patterns.updateTokenWeights, rewards.handlers.updateTokenWeights)
 Handlers.add('get-reward-stats', rewards.patterns.getRewardStats, rewards.handlers.getRewardStats)
 Handlers.add('get-stake-ownership', rewards.patterns.getStakeOwnership, rewards.handlers.getStakeOwnership)
 Handlers.add('get-unique-stakers', rewards.patterns.getUniqueStakers, rewards.handlers.getUniqueStakers)

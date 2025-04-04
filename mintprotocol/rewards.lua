@@ -31,10 +31,8 @@ LastRewardTimestamp = LastRewardTimestamp or 0 -- tracks last time rewards were 
 TokenWeights = TokenWeights or {}              -- weights for each stakeable token
 
 -- Default token weights if not already set
-for token, _ in pairs(config.AllowedTokensNames) do
-  if TokenWeights[token] == nil then
-    TokenWeights[token] = '100' -- Default weight: all tokens equal
-  end
+for token, weight in pairs(config.AllowedTokenWeights) do
+  TokenWeights[token] = weight
 end
 
 -- Handler patterns for rewards operations
@@ -44,10 +42,6 @@ rewards.patterns = {
     return msg.Tags.Action == 'Request-Rewards'
   end,
 
-  -- Pattern for updating token weights
-  updateTokenWeights = function(msg)
-    return msg.Tags.Action == 'Update-Token-Weights'
-  end,
 
   -- Pattern for getting reward statistics
   getRewardStats = function(msg)
@@ -291,83 +285,7 @@ rewards.handlers = {
     })
   end,
 
-  -- Handler for updating token weights
-  updateTokenWeights = function(msg)
-    security.assertNotPaused()
 
-    -- Verify caller is authorized
-    security.assertIsAuthorized(msg.From)
-
-    -- Parse token weights from message
-    local newWeights
-    if msg.Tags.Data then
-      local success, result = pcall(json.decode, msg.Tags.Data)
-      if success then
-        newWeights = result
-      else
-        msg.reply({
-          Action = 'Update-Token-Weights-Error',
-          Error = 'Failed to parse token weights JSON'
-        })
-        return
-      end
-
-      if type(newWeights) ~= 'table' then
-        msg.reply({
-          Action = 'Update-Token-Weights-Error',
-          Error = 'Invalid token weights format: expected object'
-        })
-        return
-      end
-    else
-      -- Individual token update
-      local token = msg.Tags.Token
-      local weight = msg.Tags.Weight
-
-      -- Validate token and weight
-      assert(security.isTokenAllowed(token), 'Token is not allowed for staking')
-      assert(type(weight) == 'string' and utils.math.isPositive(weight), 'Weight must be a positive number')
-
-      -- Update single token weight
-      TokenWeights[token] = weight
-
-      msg.reply({
-        Action = 'Token-Weight-Updated',
-        Token = token,
-        Weight = weight
-      })
-      return
-    end
-
-    for token, weight in pairs(newWeights) do
-      if not security.isTokenAllowed(token) then
-        utils.logEvent('TokenWeightUpdateRejected', {
-          token = token,
-          reason = 'Token not allowed for staking'
-        })
-      elseif type(weight) ~= 'string' or not utils.math.isPositive(weight) then
-        utils.logEvent('TokenWeightUpdateRejected', {
-          token = token,
-          weight = weight,
-          reason = 'Weight must be a positive number'
-        })
-      else
-        TokenWeights[token] = weight
-      end
-    end
-
-    -- Log the update
-    utils.logEvent('TokenWeightsUpdated', {
-      updatedBy = msg.From,
-      weights = TokenWeights
-    })
-
-    -- Reply with updated weights
-    msg.reply({
-      Action = 'Token-Weights-Updated',
-      Data = json.encode(TokenWeights)
-    })
-  end,
 
   -- Handler for getting reward statistics
   getRewardStats = function(msg)

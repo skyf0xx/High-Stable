@@ -84,18 +84,20 @@ admin.handlers = {
     local ammAddress = msg.Tags['AMM-Address']
     local decimals = msg.Tags['Token-Decimals']
     local lpDecimals = msg.Tags['LP-Decimals']
+    local weight = msg.Tags['Token-Weight']
 
 
     -- Validate required information is present
-    assert(tokenAddress and tokenName and ammAddress and decimals, 'Missing token information')
+    assert(tokenAddress and tokenName and ammAddress and decimals and lpDecimals and weight, 'Missing token information')
 
     -- Convert decimals to number if present
     local decimalPlaces = tonumber(decimals)
     assert(decimalPlaces ~= nil, 'Token-Decimals must be a valid number')
+    assert(lpDecimals ~= nil, 'LP-Decimals must be a valid number')
 
 
     -- Update token configurations using config module function
-    config.updateAllowedTokens(tokenAddress, tokenName, ammAddress, decimalPlaces, lpDecimals)
+    config.updateAllowedTokens(tokenAddress, tokenName, ammAddress, decimalPlaces, lpDecimals, weight)
     state.updateAllowedTokens()
     -- Initialize staking positions for the new token
     if not StakingPositions[tokenAddress] then
