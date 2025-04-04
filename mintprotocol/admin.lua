@@ -22,7 +22,11 @@ admin.patterns = {
 
   setPauseState = function(msg)
     return msg.Tags.Action == 'Set-Pause-State'
-  end
+  end,
+  manualUnlockToken = function(msg)
+    return msg.Tags.Action == 'Manual-Unlock-Token' and msg.Tags['Token'] ~= nil
+  end,
+
 }
 
 -- Handler implementations for admin operations
@@ -114,6 +118,53 @@ admin.handlers = {
       ['Token-Name'] = tokenName,
       ['AMM-Address'] = ammAddress,
       ['Token-Decimals'] = decimals
+    })
+  end,
+
+  manualUnlockToken = function(msg)
+    -- Verify the caller is authorized (contract owner)
+    security.assertIsAuthorized(msg.From)
+
+    local token = msg.Tags['Token']
+
+    -- Check if token is actually locked
+    if not state.isTokenLocked(token) then
+      msg.reply({
+        Action = 'Manual-Unlock-Token-Error',
+        Error = 'Token is not currently locked',
+        Token = token,
+        TokenName = config.AllowedTokensNames[token] or 'Unknown Token'
+      })
+      return
+    end
+
+    -- Get lock info before unlocking
+    local lockInfo = state.getTokenLockInfo(token)
+
+    -- Unlock the token
+    state.unlockTokenForStaking(token)
+
+    -- Log the manual unlock
+    utils.logEvent('ManualTokenUnlock', {
+      admin = msg.From,
+      token = token,
+      tokenName = config.AllowedTokensNames[token] or 'Unknown Token',
+      lockedBy = lockInfo.lockedBy,
+      lockedAt = lockInfo.lockedAt,
+      lockDuration = os.time() - lockInfo.lockedAt,
+      operationId = lockInfo.operationId,
+      clientOperationId = lockInfo.clientOperationId,
+      reason = msg.Tags['Reason'] or 'Manual admin maintenance'
+    })
+
+    -- Reply to confirm the action
+    msg.reply({
+      Action = 'Manual-Unlock-Token-Complete',
+      Token = token,
+      TokenName = config.AllowedTokensNames[token] or 'Unknown Token',
+      ['Previously-Locked-By'] = lockInfo.lockedBy,
+      ['Lock-Duration'] = tostring(os.time() - lockInfo.lockedAt) + 's',
+      ['Timestamp'] = tostring(os.time())
     })
   end
 }

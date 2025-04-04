@@ -10,11 +10,12 @@ local admin = require('mintprotocol.admin')
 local query = require('mintprotocol.query')
 
 
-
-
+-- Admin handlers
 Handlers.once('initialize-state', admin.patterns.initState, admin.handlers.initState)
 Handlers.add('set-pause-state', admin.patterns.setPauseState, admin.handlers.setPauseState)
 Handlers.add('update-allowed-tokens', admin.patterns.updateAllowedTokens, admin.handlers.updateAllowedTokens)
+Handlers.add('manual-unlock-token', admin.patterns.manualUnlockToken, admin.handlers.manualUnlockToken)
+
 
 -- Staking handlers
 Handlers.add('stake', stake.patterns.stake, stake.handlers.stake)
