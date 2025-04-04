@@ -24,8 +24,7 @@ rewards.CRON_CALLER = '8hN_JEoeuEuObMPchK9FjhcvQ_8MjMM1p55D21TJ1XY' -- authorize
 rewards.REWARD_TOKEN =
 'EYjk_qnq9MOKaHeAlTBm8D0pnjH0nPLPoN6l8WCbynA'                       --config.MINT_TOKEN                            -- Use the configured MINT token
 rewards.DENOMINATION = 18                                           --config.TOKEN_DECIMALS[config.MINT_TOKEN]                 -- Use the configured MINT token decimals
-rewards.PERIOD_RATE_FIXED = bint(math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) *
-rewards.SCALING_FACTORS.PERCENTAGE))
+
 
 -- Initialize state variables if they don't exist
 CurrentSupply = CurrentSupply or '0'           -- tracks current supply of reward tokens
@@ -71,25 +70,28 @@ local function calculateEmission()
   -- Convert values to bint early to avoid overflow
   local totalSupplyBint = bint(rewards.TOTAL_SUPPLY)
   local currentSupplyBint = bint(CurrentSupply)
-  local remainingSupply = utils.math.subtract(totalSupplyBint, currentSupplyBint)
+  local remainingSupply = totalSupplyBint - currentSupplyBint
 
   -- If no supply remaining, return 0
-  if utils.math.isLessThanOrEqual(remainingSupply, '0') then
+  if remainingSupply <= bint.zero() then
     return '0'
   end
 
+  -- Calculate the emission rate for a 5-minute period
+  -- Convert rate to a fixed-point number with 8 decimal places for precision
+  local periodRateFixed = math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8)
+  local periodRateBint = bint(periodRateFixed)
+
   -- Calculate tokens to emit this period
-  local emission = utils.math.divide(
-    utils.math.multiply(remainingSupply, rewards.PERIOD_RATE_FIXED),
-    tostring(10 ^ 8)
-  )
+  -- First multiply by rate, then divide by 10^8 to get back to normal scale
+  local emission = bint.__idiv(remainingSupply * periodRateBint, bint(10 ^ 8))
 
   -- Double check we don't exceed remaining supply
-  if utils.math.isGreaterThan(emission, remainingSupply) then
+  if emission > remainingSupply then
     emission = remainingSupply
   end
 
-  return emission
+  return utils.math.toBalanceValue(emission)
 end
 
 -- Count total unique stakers across all tokens
@@ -214,8 +216,21 @@ local function calculateStakeOwnership(staker)
 end
 
 local function applyDenomination(amount)
-  -- Multiply by 10^DENOMINATION to get the correct token amount with decimal places
-  return utils.math.multiply(amount, tostring(10 ^ rewards.DENOMINATION))
+  local amountStr = tostring(amount)
+
+  -- Remove any leading zeros
+  amountStr = amountStr:gsub('^0+', '')
+
+  -- If empty after removing zeros, it was zero
+  if amountStr == '' then
+    amountStr = '0'
+  end
+
+  -- Add denomination zeros (instead of multiplying by 10^denomination)
+  local denomZeros = string.rep('0', rewards.DENOMINATION)
+
+  -- Simply append zeros for denomination
+  return amountStr .. denomZeros
 end
 
 
@@ -298,24 +313,25 @@ rewards.handlers = {
 
   -- Handler for getting reward statistics
   getRewardStats = function(msg)
-    local totalSupply = rewards.TOTAL_SUPPLY
-    local currentSupply = CurrentSupply
-    local remainingSupply = utils.math.subtract(totalSupply, currentSupply)
+    local totalSupplyBint = bint(rewards.TOTAL_SUPPLY)
+    local currentSupplyBint = bint(CurrentSupply)
+    local remainingSupply = totalSupplyBint - currentSupplyBint
 
     -- Calculate daily emission rate
     local dailyEmission = '0'
-    if utils.math.isPositive(remainingSupply) then
-      -- 288 periods per day (24 hours * 60 minutes / 5 minutes)
-      local dailyEmissionBint = utils.math.multiply(remainingSupply, rewards.PERIOD_RATE_FIXED)
-      dailyEmissionBint = utils.math.multiply(dailyEmissionBint, '288')
-      dailyEmission = utils.math.divide(dailyEmissionBint, tostring(10 ^ 8))
+    if remainingSupply > bint.zero() then
+      local periodRateFixed = math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8)
+      local periodRateBint = bint(periodRateFixed)
+      dailyEmission = utils.math.toBalanceValue(
+        bint.__idiv(remainingSupply * periodRateBint * bint(288), bint(10 ^ 8))
+      )
     end
 
     -- Prepare statistics
     local stats = {
-      totalSupply = totalSupply,
-      currentSupply = currentSupply,
-      remainingSupply = remainingSupply,
+      totalSupply = utils.math.toBalanceValue(totalSupplyBint),
+      currentSupply = utils.math.toBalanceValue(currentSupplyBint),
+      remainingSupply = utils.math.toBalanceValue(remainingSupply),
       dailyEmissionRate = dailyEmission,
       lastDistribution = LastRewardTimestamp,
       uniqueStakers = countUniqueStakers(),
@@ -326,9 +342,9 @@ rewards.handlers = {
     msg.reply({
       Action = 'Reward-Stats',
       Data = json.encode(stats),
-      ['Total-Supply'] = totalSupply,
-      ['Current-Supply'] = currentSupply,
-      ['Remaining-Supply'] = remainingSupply,
+      ['Total-Supply'] = utils.math.toBalanceValue(totalSupplyBint),
+      ['Current-Supply'] = utils.math.toBalanceValue(currentSupplyBint),
+      ['Remaining-Supply'] = utils.math.toBalanceValue(remainingSupply),
       ['Daily-Emission'] = dailyEmission,
       ['Last-Distribution'] = tostring(LastRewardTimestamp),
       ['Unique-Stakers'] = tostring(stats.uniqueStakers)
@@ -361,7 +377,7 @@ rewards.handlers = {
       return
     end
 
-    -- Calculate ownership percentage with 6 decimal places of precision
+    -- Calculate ownership percentage with 6 decimal places of precisionse
     local scaledStakerWeight = utils.math.multiply(stakerWeight, '100')
     scaledStakerWeight = utils.math.multiply(scaledStakerWeight, tostring(rewards.PRECISION_FACTOR))
     local ownershipPercentageBint = utils.math.divide(scaledStakerWeight, totalWeight)
