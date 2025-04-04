@@ -7,6 +7,7 @@ local stake = require('mintprotocol.stake')
 local unstake = require('mintprotocol.unstake')
 local operations = require('mintprotocol.operations')
 local admin = require('mintprotocol.admin')
+local rewards = require('mintprotocol.rewards')
 local query = require('mintprotocol.query')
 
 
@@ -25,6 +26,16 @@ Handlers.add('provide-confirmation', stake.patterns.provideConfirmation, stake.h
 Handlers.add('unstake', unstake.patterns.unstake, unstake.handlers.unstake)
 Handlers.add('burn-info', unstake.patterns.burnInfo, unstake.handlers.burnInfo)
 Handlers.add('token-receipt', unstake.patterns.tokenReceipt, unstake.handlers.tokenReceipt)
+
+
+-- Rewards handlers
+Handlers.add('request-rewards', rewards.patterns.requestRewards, rewards.handlers.requestRewards)
+Handlers.add('update-token-weights', rewards.patterns.updateTokenWeights, rewards.handlers.updateTokenWeights)
+Handlers.add('get-reward-stats', rewards.patterns.getRewardStats, rewards.handlers.getRewardStats)
+Handlers.add('get-stake-ownership', rewards.patterns.getStakeOwnership, rewards.handlers.getStakeOwnership)
+Handlers.add('get-unique-stakers', rewards.patterns.getUniqueStakers, rewards.handlers.getUniqueStakers)
+Handlers.add('get-token-stakes', rewards.patterns.getTokenStakes, rewards.handlers.getTokenStakes)
+
 
 -- Query handlers
 Handlers.add('get-position', query.patterns.getPosition, query.handlers.getPosition)
