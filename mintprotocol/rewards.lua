@@ -215,23 +215,7 @@ local function calculateStakeOwnership(staker)
   }
 end
 
-local function applyDenomination(amount)
-  local amountStr = tostring(amount)
 
-  -- Remove any leading zeros
-  amountStr = amountStr:gsub('^0+', '')
-
-  -- If empty after removing zeros, it was zero
-  if amountStr == '' then
-    amountStr = '0'
-  end
-
-  -- Add denomination zeros (instead of multiplying by 10^denomination)
-  local denomZeros = string.rep('0', rewards.DENOMINATION)
-
-  -- Simply append zeros for denomination
-  return amountStr .. denomZeros
-end
 
 
 -- Handler implementations for rewards operations
@@ -273,13 +257,13 @@ rewards.handlers = {
           amount = amount
         })
 
-        local denominatedAmount = applyDenomination(amount)
+
         -- Send reward token to staker
         Send({
           Target = rewards.REWARD_TOKEN,
           Action = 'Transfer',
           Recipient = staker,
-          Quantity = denominatedAmount,
+          Quantity = amount,
           ['X-Reward-Type'] = 'Staking-Reward',
           ['X-Distribution-Time'] = tostring(currentTime)
         })
