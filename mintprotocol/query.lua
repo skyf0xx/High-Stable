@@ -43,6 +43,11 @@ query.patterns = {
     return msg.Tags.Action == 'Get-User-Operations'
   end,
 
+  getLockedTokens = function(msg)
+    return msg.Tags.Action == 'Get-Locked-Tokens'
+  end,
+
+
 }
 
 -- Handler implementations for query operations
@@ -639,6 +644,62 @@ query.handlers = {
       ['Status-Filter'] = statusFilter or 'none',
       ['Token-Filter'] = tokenFilter or 'none',
       ['Type-Filter'] = typeFilter or 'none'
+    })
+  end,
+
+  getLockedTokens = function(msg)
+    -- Optionally verify that the caller is authorized
+    if msg.Tags['Admin-Only'] == 'true' then
+      security.assertIsAuthorized(msg.From)
+    end
+
+    local lockedTokens = {}
+    local count = 0
+    local now = os.time()
+
+    -- Iterate through all locked tokens
+    for token, lockInfo in pairs(StakingLocks or {}) do
+      count = count + 1
+      local lockDuration = now - lockInfo.lockedAt
+      local tokenName = config.AllowedTokensNames[token] or 'Unknown Token'
+
+      -- Add token info to results
+      lockedTokens[token] = {
+        tokenName = tokenName,
+        lockedBy = lockInfo.lockedBy,
+        lockedAt = lockInfo.lockedAt,
+        formattedLockedTime = utils.formatTimestamp(lockInfo.lockedAt),
+        lockDuration = lockDuration,
+        formattedDuration = utils.formatDuration(lockDuration * 1000), -- Convert to milliseconds for formatDuration
+        operationId = lockInfo.operationId,
+        clientOperationId = lockInfo.clientOperationId,
+        isStale = (lockDuration > 600) -- Flag locks older than 10 minutes (600s) as stale
+      }
+    end
+
+    -- Safe JSON encoding with pcall
+    local success, encodedData = pcall(json.encode, lockedTokens)
+    if not success then
+      msg.reply({
+        Action = 'Get-Locked-Tokens-Error',
+        Error = 'JSON encoding error'
+      })
+      return
+    end
+
+    -- Reply with locked tokens information
+    msg.reply({
+      Action = 'Locked-Tokens',
+      Data = encodedData,
+      ['Total-Locked'] = tostring(count),
+      ['Timestamp'] = tostring(now)
+    })
+
+    -- Log the query
+    utils.logEvent('LockedTokensQuery', {
+      caller = msg.From,
+      totalLocked = count,
+      timestamp = now
     })
   end
 }
