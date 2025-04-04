@@ -89,7 +89,7 @@ local function calculateEmission()
     emission = remainingSupply
   end
 
-  return utils.toBalanceValue(emission)
+  return utils.math.toBalanceValue(emission)
 end
 
 -- Count total unique stakers across all tokens
@@ -172,7 +172,7 @@ local function calculateStakerAllocations(totalEmission)
           if not allocations[staker] then
             allocations[staker] = '0'
           end
-          allocations[staker] = utils.toBalanceValue(bint(allocations[staker]) + allocation)
+          allocations[staker] = utils.math.toBalanceValue(bint(allocations[staker]) + allocation)
         end
       end
     end
@@ -204,7 +204,7 @@ local function calculateStakerAllocations(totalEmission)
       if not allocations[highestStaker] then
         allocations[highestStaker] = '0'
       end
-      allocations[highestStaker] = utils.toBalanceValue(
+      allocations[highestStaker] = utils.math.toBalanceValue(
         bint(allocations[highestStaker]) + remainingEmission
       )
     end
@@ -394,16 +394,16 @@ rewards.handlers = {
     if remainingSupply > bint.zero() then
       local periodRateFixed = math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8)
       local periodRateBint = bint(periodRateFixed)
-      dailyEmission = utils.toBalanceValue(
+      dailyEmission = utils.math.toBalanceValue(
         bint.__idiv(remainingSupply * periodRateBint * bint(288), bint(10 ^ 8))
       )
     end
 
     -- Prepare statistics
     local stats = {
-      totalSupply = utils.toBalanceValue(totalSupplyBint),
-      currentSupply = utils.toBalanceValue(currentSupplyBint),
-      remainingSupply = utils.toBalanceValue(remainingSupply),
+      totalSupply = utils.math.toBalanceValue(totalSupplyBint),
+      currentSupply = utils.math.toBalanceValue(currentSupplyBint),
+      remainingSupply = utils.math.toBalanceValue(remainingSupply),
       dailyEmissionRate = dailyEmission,
       lastDistribution = LastRewardTimestamp,
       uniqueStakers = countUniqueStakers(),
@@ -414,9 +414,9 @@ rewards.handlers = {
     msg.reply({
       Action = 'Reward-Stats',
       Data = json.encode(stats),
-      ['Total-Supply'] = utils.toBalanceValue(totalSupplyBint),
-      ['Current-Supply'] = utils.toBalanceValue(currentSupplyBint),
-      ['Remaining-Supply'] = utils.toBalanceValue(remainingSupply),
+      ['Total-Supply'] = utils.math.toBalanceValue(totalSupplyBint),
+      ['Current-Supply'] = utils.math.toBalanceValue(currentSupplyBint),
+      ['Remaining-Supply'] = utils.math.toBalanceValue(remainingSupply),
       ['Daily-Emission'] = dailyEmission,
       ['Last-Distribution'] = tostring(LastRewardTimestamp),
       ['Unique-Stakers'] = tostring(stats.uniqueStakers)
@@ -455,7 +455,7 @@ rewards.handlers = {
 
     -- Convert to string with proper decimal places
     local ownershipPercentageStr = string.format('%.6f',
-      tonumber(utils.toBalanceValue(ownershipPercentageBint)) / rewards.PRECISION_FACTOR)
+      tonumber(utils.math.toBalanceValue(ownershipPercentageBint)) / rewards.PRECISION_FACTOR)
 
     -- Reply with ownership details
     msg.reply({
@@ -464,8 +464,8 @@ rewards.handlers = {
       ['Ownership-Percentage'] = ownershipPercentageStr,
       Data = json.encode({
         percentage = ownershipPercentageStr,
-        stakerWeight = utils.toBalanceValue(stakerWeight),
-        totalWeight = utils.toBalanceValue(totalWeight)
+        stakerWeight = utils.math.toBalanceValue(stakerWeight),
+        totalWeight = utils.math.toBalanceValue(totalWeight)
       })
     })
   end,
