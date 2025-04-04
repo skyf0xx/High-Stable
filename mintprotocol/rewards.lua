@@ -23,6 +23,7 @@ rewards.PRECISION_FACTOR = rewards.SCALING_FACTORS.PRECISION        -- for calcu
 rewards.CRON_CALLER = '8hN_JEoeuEuObMPchK9FjhcvQ_8MjMM1p55D21TJ1XY' -- authorized caller for periodic rewards
 rewards.REWARD_TOKEN =
 'EYjk_qnq9MOKaHeAlTBm8D0pnjH0nPLPoN6l8WCbynA'                       --config.MINT_TOKEN                            -- Use the configured MINT token
+rewards.DENOMINATION = 18                                           --config.TOKEN_DECIMALS[config.MINT_TOKEN]                 -- Use the configured MINT token decimals
 rewards.PERIOD_RATE_FIXED = bint(math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8))
 
 -- Initialize state variables if they don't exist
@@ -211,6 +212,12 @@ local function calculateStakeOwnership(staker)
   }
 end
 
+local function applyDenomination(amount)
+  -- Multiply by 10^DENOMINATION to get the correct token amount with decimal places
+  return utils.math.multiply(amount, tostring(10 ^ rewards.DENOMINATION))
+end
+
+
 -- Handler implementations for rewards operations
 rewards.handlers = {
   -- Handler for requesting token rewards distribution
@@ -250,12 +257,13 @@ rewards.handlers = {
           amount = amount
         })
 
+        local denominatedAmount = applyDenomination(amount)
         -- Send reward token to staker
         Send({
           Target = rewards.REWARD_TOKEN,
           Action = 'Transfer',
           Recipient = staker,
-          Quantity = amount,
+          Quantity = denominatedAmount,
           ['X-Reward-Type'] = 'Staking-Reward',
           ['X-Distribution-Time'] = tostring(currentTime)
         })
