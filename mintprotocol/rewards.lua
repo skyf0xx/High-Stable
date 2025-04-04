@@ -24,7 +24,8 @@ rewards.CRON_CALLER = '8hN_JEoeuEuObMPchK9FjhcvQ_8MjMM1p55D21TJ1XY' -- authorize
 rewards.REWARD_TOKEN =
 'EYjk_qnq9MOKaHeAlTBm8D0pnjH0nPLPoN6l8WCbynA'                       --config.MINT_TOKEN                            -- Use the configured MINT token
 rewards.DENOMINATION = 18                                           --config.TOKEN_DECIMALS[config.MINT_TOKEN]                 -- Use the configured MINT token decimals
-rewards.PERIOD_RATE_FIXED = bint(math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8))
+rewards.PERIOD_RATE_FIXED = bint(math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) *
+rewards.SCALING_FACTORS.PERCENTAGE))
 
 -- Initialize state variables if they don't exist
 CurrentSupply = CurrentSupply or '0'           -- tracks current supply of reward tokens
