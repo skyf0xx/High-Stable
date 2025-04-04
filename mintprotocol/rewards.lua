@@ -11,15 +11,22 @@ local json = require('json')
 local rewards = {}
 
 -- Constants for emission calculations
-rewards.TOTAL_SUPPLY = 5000000 * 10 ^ 8                              -- 21M tokens with 8 decimal places
-rewards.EMISSION_RATE_PER_MONTH = 0.0285                             -- 1.425% monthly rate
-rewards.PERIODS_PER_MONTH = 8760                                     -- number of 5-minute periods in a month (43800/5)
-rewards.PRECISION_FACTOR = bint(10 ^ 16)                             -- for calculating emissions with high precision
-rewards.CRON_CALLER = '8hN_JEoeuEuObMPchK9FjhcvQ_8MjMM1p55D21TJ1XY'  -- authorized caller for periodic rewards
-rewards.REWARD_TOKEN = 'EYjk_qnq9MOKaHeAlTBm8D0pnjH0nPLPoN6l8WCbynA' -- token to distribute as rewards (MINT)
+rewards.TOTAL_SUPPLY = 5000000 * 10 ^ 8                             -- 5M tokens with 8 decimal places
+rewards.EMISSION_RATE_PER_MONTH = 0.0285                            -- 1.425% monthly rate
+rewards.PERIODS_PER_MONTH = 8640                                    -- number of 5-minute periods in a month (30 days * 24 hours * 60 minutes / 5)
+rewards.SCALING_FACTORS = {
+  PRECISION = bint(10 ^ 16),                                        -- For high-precision calculations
+  PERCENTAGE = bint(10 ^ 8),                                        -- For percentage calculations
+  DISPLAY = bint(10 ^ 6)                                            -- For display formatting
+}
+rewards.PRECISION_FACTOR = rewards.SCALING_FACTORS.PRECISION        -- for calculating emissions with high precision
+rewards.CRON_CALLER = '8hN_JEoeuEuObMPchK9FjhcvQ_8MjMM1p55D21TJ1XY' -- authorized caller for periodic rewards
+rewards.REWARD_TOKEN =
+'EYjk_qnq9MOKaHeAlTBm8D0pnjH0nPLPoN6l8WCbynA'                       --config.MINT_TOKEN                            -- Use the configured MINT token
+rewards.PERIOD_RATE_FIXED = bint(math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8))
 
 -- Initialize state variables if they don't exist
-CurrentSupply = CurrentSupply or 0             -- tracks current supply of reward tokens
+CurrentSupply = CurrentSupply or '0'           -- tracks current supply of reward tokens
 LastRewardTimestamp = LastRewardTimestamp or 0 -- tracks last time rewards were distributed
 TokenWeights = TokenWeights or {}              -- weights for each stakeable token
 
@@ -68,28 +75,25 @@ local function calculateEmission()
   -- Convert values to bint early to avoid overflow
   local totalSupplyBint = bint(rewards.TOTAL_SUPPLY)
   local currentSupplyBint = bint(CurrentSupply)
-  local remainingSupply = totalSupplyBint - currentSupplyBint
+  local remainingSupply = utils.math.subtract(totalSupplyBint, currentSupplyBint)
 
   -- If no supply remaining, return 0
-  if remainingSupply <= bint.zero() then
+  if utils.math.isLessThanOrEqual(remainingSupply, '0') then
     return '0'
   end
 
-  -- Calculate the emission rate for a 5-minute period
-  -- Convert rate to a fixed-point number with 8 decimal places for precision
-  local periodRateFixed = math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8)
-  local periodRateBint = bint(periodRateFixed)
-
   -- Calculate tokens to emit this period
-  -- First multiply by rate, then divide by 10^8 to get back to normal scale
-  local emission = bint.__idiv(remainingSupply * periodRateBint, bint(10 ^ 8))
+  local emission = utils.math.divide(
+    utils.math.multiply(remainingSupply, rewards.PERIOD_RATE_FIXED),
+    tostring(10 ^ 8)
+  )
 
   -- Double check we don't exceed remaining supply
-  if emission > remainingSupply then
+  if utils.math.isGreaterThan(emission, remainingSupply) then
     emission = remainingSupply
   end
 
-  return utils.math.toBalanceValue(emission)
+  return emission
 end
 
 -- Count total unique stakers across all tokens
@@ -115,15 +119,16 @@ end
 
 -- Calculate total stake weight for all tokens
 local function calculateTotalStakeWeight()
-  local totalWeight = bint.zero()
+  local totalWeight = '0'
   local stakingPositions = state.getStakingPositions()
 
   for token, tokenPositions in pairs(stakingPositions) do
-    local tokenWeight = bint(TokenWeights[token] or '100')
+    local tokenWeight = TokenWeights[token] or '100'
 
     for _, position in pairs(tokenPositions) do
       if position and utils.math.isPositive(position.amount) then
-        totalWeight = totalWeight + (bint(position.amount) * tokenWeight)
+        local positionWeight = utils.math.multiply(position.amount, tokenWeight)
+        totalWeight = utils.math.add(totalWeight, positionWeight)
       end
     end
   end
@@ -135,104 +140,71 @@ end
 local function calculateStakerAllocations(totalEmission)
   local allocations = {}
   local totalStakeWeight = calculateTotalStakeWeight()
-  local emissionBint = bint(totalEmission)
 
   -- If no stakes, return empty allocations
-  if totalStakeWeight == bint.zero() then
+  if utils.math.isZero(totalStakeWeight) then
     return allocations
   end
 
   -- Track rounding errors to distribute later
-  local totalAllocated = bint.zero()
+  local totalAllocated = '0'
   local stakingPositions = state.getStakingPositions()
 
   -- Calculate individual allocations with higher precision
   for token, tokenPositions in pairs(stakingPositions) do
-    local tokenWeight = bint(TokenWeights[token] or '100')
+    local tokenWeight = TokenWeights[token] or '100'
 
     for staker, position in pairs(tokenPositions) do
       if position and utils.math.isPositive(position.amount) then
-        local stakerWeight = bint(position.amount) * tokenWeight
+        local stakerWeight = utils.math.multiply(position.amount, tokenWeight)
 
         -- Calculate allocation with higher precision
         -- First multiply by emission and precision factor before division
-        local allocation = bint.__idiv(
-          (emissionBint * stakerWeight * rewards.PRECISION_FACTOR),
-          (totalStakeWeight)
-        )
+        local weightedEmission = utils.math.multiply(totalEmission, stakerWeight)
+        local precisionWeightedEmission = utils.math.multiply(weightedEmission, tostring(rewards.PRECISION_FACTOR))
+        local allocation = utils.math.divide(precisionWeightedEmission, totalStakeWeight)
 
         -- Remove precision factor
-        allocation = bint.__idiv(allocation, rewards.PRECISION_FACTOR)
+        allocation = utils.math.divide(allocation, tostring(rewards.PRECISION_FACTOR))
 
         -- Track total allocated
-        totalAllocated = totalAllocated + allocation
+        totalAllocated = utils.math.add(totalAllocated, allocation)
 
         -- Store allocation
-        if allocation > bint.zero() then
+        if utils.math.isPositive(allocation) then
           if not allocations[staker] then
             allocations[staker] = '0'
           end
-          allocations[staker] = utils.math.toBalanceValue(bint(allocations[staker]) + allocation)
+          allocations[staker] = utils.math.add(allocations[staker], allocation)
         end
       end
     end
   end
 
-  -- Distribute any remaining dust from rounding (if any)
-  local remainingEmission = emissionBint - totalAllocated
-  if remainingEmission > bint.zero() then
-    -- Find the staker with the highest stake to give them the dust
-    local highestStaker = nil
-    local highestStake = bint.zero()
-
-    for token, tokenPositions in pairs(stakingPositions) do
-      local tokenWeight = bint(TokenWeights[token] or '100')
-
-      for staker, position in pairs(tokenPositions) do
-        if position and utils.math.isPositive(position.amount) then
-          local stakerWeight = bint(position.amount) * tokenWeight
-          if stakerWeight > highestStake then
-            highestStake = stakerWeight
-            highestStaker = staker
-          end
-        end
-      end
-    end
-
-    -- Add remaining dust to highest staker's allocation
-    if highestStaker then
-      if not allocations[highestStaker] then
-        allocations[highestStaker] = '0'
-      end
-      allocations[highestStaker] = utils.math.toBalanceValue(
-        bint(allocations[highestStaker]) + remainingEmission
-      )
-    end
-  end
 
   return allocations
 end
 
 -- Calculate ownership percentage for a specific staker
 local function calculateStakeOwnership(staker)
-  local totalStakeWeight = bint.zero()
-  local stakerWeight = bint.zero()
+  local totalStakeWeight = '0'
+  local stakerWeight = '0'
   local stakingPositions = state.getStakingPositions()
 
   -- Calculate total weighted stake across all tokens
   for token, tokenPositions in pairs(stakingPositions) do
-    local tokenWeight = bint(TokenWeights[token] or '100')
+    local tokenWeight = TokenWeights[token] or '100'
 
     -- Calculate weights for all stakers
     for addr, position in pairs(tokenPositions) do
       if position and utils.math.isPositive(position.amount) then
-        -- Convert amount to bint and calculate weight
-        local weight = bint(position.amount) * tokenWeight
-        totalStakeWeight = totalStakeWeight + weight
+        -- Calculate weight
+        local weight = utils.math.multiply(position.amount, tokenWeight)
+        totalStakeWeight = utils.math.add(totalStakeWeight, weight)
 
         -- Calculate this staker's weight if it matches
         if addr == staker then
-          stakerWeight = stakerWeight + weight
+          stakerWeight = utils.math.add(stakerWeight, weight)
         end
       end
     end
@@ -255,9 +227,8 @@ rewards.handlers = {
     assert(msg.From == rewards.CRON_CALLER or msg.From == ao.id,
       'Request is not from the trusted Cron or contract owner!')
 
-    -- Ensure sufficient time has passed since last rewards
     local currentTime = os.time()
-    assert(currentTime >= LastRewardTimestamp + 300, 'Too soon for next reward distribution') -- 300 seconds = 5 minutes
+    assert(currentTime >= LastRewardTimestamp + 300000, 'Too soon for next reward distribution')
 
     -- Calculate new tokens to mint this period
     local newTokens = calculateEmission()
@@ -340,6 +311,14 @@ rewards.handlers = {
         })
         return
       end
+
+      if type(newWeights) ~= 'table' then
+        msg.reply({
+          Action = 'Update-Token-Weights-Error',
+          Error = 'Invalid token weights format: expected object'
+        })
+        return
+      end
     else
       -- Individual token update
       local token = msg.Tags.Token
@@ -360,13 +339,20 @@ rewards.handlers = {
       return
     end
 
-    -- Validate and update weights
     for token, weight in pairs(newWeights) do
-      if security.isTokenAllowed(token) then
-        -- Ensure weight is a positive number
-        if type(weight) == 'string' and utils.math.isPositive(weight) then
-          TokenWeights[token] = weight
-        end
+      if not security.isTokenAllowed(token) then
+        utils.logEvent('TokenWeightUpdateRejected', {
+          token = token,
+          reason = 'Token not allowed for staking'
+        })
+      elseif type(weight) ~= 'string' or not utils.math.isPositive(weight) then
+        utils.logEvent('TokenWeightUpdateRejected', {
+          token = token,
+          weight = weight,
+          reason = 'Weight must be a positive number'
+        })
+      else
+        TokenWeights[token] = weight
       end
     end
 
@@ -385,25 +371,24 @@ rewards.handlers = {
 
   -- Handler for getting reward statistics
   getRewardStats = function(msg)
-    local totalSupplyBint = bint(rewards.TOTAL_SUPPLY)
-    local currentSupplyBint = bint(CurrentSupply)
-    local remainingSupply = totalSupplyBint - currentSupplyBint
+    local totalSupply = rewards.TOTAL_SUPPLY
+    local currentSupply = CurrentSupply
+    local remainingSupply = utils.math.subtract(totalSupply, currentSupply)
 
     -- Calculate daily emission rate
     local dailyEmission = '0'
-    if remainingSupply > bint.zero() then
-      local periodRateFixed = math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8)
-      local periodRateBint = bint(periodRateFixed)
-      dailyEmission = utils.math.toBalanceValue(
-        bint.__idiv(remainingSupply * periodRateBint * bint(288), bint(10 ^ 8))
-      )
+    if utils.math.isPositive(remainingSupply) then
+      -- 288 periods per day (24 hours * 60 minutes / 5 minutes)
+      local dailyEmissionBint = utils.math.multiply(remainingSupply, rewards.PERIOD_RATE_FIXED)
+      dailyEmissionBint = utils.math.multiply(dailyEmissionBint, '288')
+      dailyEmission = utils.math.divide(dailyEmissionBint, tostring(10 ^ 8))
     end
 
     -- Prepare statistics
     local stats = {
-      totalSupply = utils.math.toBalanceValue(totalSupplyBint),
-      currentSupply = utils.math.toBalanceValue(currentSupplyBint),
-      remainingSupply = utils.math.toBalanceValue(remainingSupply),
+      totalSupply = totalSupply,
+      currentSupply = currentSupply,
+      remainingSupply = remainingSupply,
       dailyEmissionRate = dailyEmission,
       lastDistribution = LastRewardTimestamp,
       uniqueStakers = countUniqueStakers(),
@@ -414,9 +399,9 @@ rewards.handlers = {
     msg.reply({
       Action = 'Reward-Stats',
       Data = json.encode(stats),
-      ['Total-Supply'] = utils.math.toBalanceValue(totalSupplyBint),
-      ['Current-Supply'] = utils.math.toBalanceValue(currentSupplyBint),
-      ['Remaining-Supply'] = utils.math.toBalanceValue(remainingSupply),
+      ['Total-Supply'] = totalSupply,
+      ['Current-Supply'] = currentSupply,
+      ['Remaining-Supply'] = remainingSupply,
       ['Daily-Emission'] = dailyEmission,
       ['Last-Distribution'] = tostring(LastRewardTimestamp),
       ['Unique-Stakers'] = tostring(stats.uniqueStakers)
@@ -435,7 +420,7 @@ rewards.handlers = {
     local stakerWeight = ownershipData.stakerWeight
 
     -- Handle case where there are no stakes
-    if totalWeight == bint.zero() then
+    if utils.math.isZero(totalWeight) then
       msg.reply({
         Action = 'Stake-Ownership',
         Staker = staker,
@@ -450,12 +435,13 @@ rewards.handlers = {
     end
 
     -- Calculate ownership percentage with 6 decimal places of precision
-    local scaledStakerWeight = stakerWeight * bint(100 * rewards.PRECISION_FACTOR)
-    local ownershipPercentageBint = bint.__idiv(scaledStakerWeight, totalWeight)
+    local scaledStakerWeight = utils.math.multiply(stakerWeight, '100')
+    scaledStakerWeight = utils.math.multiply(scaledStakerWeight, tostring(rewards.PRECISION_FACTOR))
+    local ownershipPercentageBint = utils.math.divide(scaledStakerWeight, totalWeight)
 
     -- Convert to string with proper decimal places
-    local ownershipPercentageStr = string.format('%.6f',
-      tonumber(utils.math.toBalanceValue(ownershipPercentageBint)) / rewards.PRECISION_FACTOR)
+    local percentageValue = utils.math.divide(ownershipPercentageBint, tostring(rewards.PRECISION_FACTOR))
+    local ownershipPercentageStr = string.format('%.6f', tonumber(percentageValue))
 
     -- Reply with ownership details
     msg.reply({
@@ -464,8 +450,8 @@ rewards.handlers = {
       ['Ownership-Percentage'] = ownershipPercentageStr,
       Data = json.encode({
         percentage = ownershipPercentageStr,
-        stakerWeight = utils.math.toBalanceValue(stakerWeight),
-        totalWeight = utils.math.toBalanceValue(totalWeight)
+        stakerWeight = stakerWeight,
+        totalWeight = totalWeight
       })
     })
   end,
