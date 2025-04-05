@@ -25,10 +25,15 @@ rewards.REWARD_TOKEN =
 'EYjk_qnq9MOKaHeAlTBm8D0pnjH0nPLPoN6l8WCbynA'                       --config.MINT_TOKEN                            -- Use the configured MINT token
 rewards.DENOMINATION = 18                                           --config.TOKEN_DECIMALS[config.MINT_TOKEN]                 -- Use the configured MINT token decimals
 rewards.TOTAL_SUPPLY = bint(5000000) * bint(10 ^ rewards.DENOMINATION)
+rewards.MINT_BURN_RATE_WEEKLY = 0.0025                              -- 0.25% weekly burn rate from mint.policy
+rewards.CAP_PERCENTAGE = 0.45                                       -- Cap at 45% of weekly burn (safely under 50%)
+rewards.MINT_TOKEN_SUPPLY = '0'                                     -- Initialize with zero, will be updated
+
 -- Initialize state variables if they don't exist
 CurrentSupply = CurrentSupply or '0'           -- tracks current supply of reward tokens
 LastRewardTimestamp = LastRewardTimestamp or 0 -- tracks last time rewards were distributed
 TokenWeights = TokenWeights or {}              -- weights for each stakeable token
+
 
 -- Default token weights if not already set
 for token, weight in pairs(config.AllowedTokenWeights) do
@@ -88,6 +93,24 @@ local function calculateEmission()
   -- Double check we don't exceed remaining supply
   if emission > remainingSupply then
     emission = remainingSupply
+  end
+
+  -- Calculate cap based on mint.policy burn rate
+  local mintSupply = rewards.MINT_TOKEN_SUPPLY
+  if mintSupply ~= '0' then
+    -- Calculate weekly burn amount
+    local weeklyBurnAmount = utils.math.multiply(mintSupply, tostring(rewards.MINT_BURN_RATE_WEEKLY))
+
+    -- Set cap to configured percentage of weekly burn amount
+    local weeklyCap = utils.math.multiply(weeklyBurnAmount, tostring(rewards.CAP_PERCENTAGE))
+
+    -- Calculate 5-minute period cap (weekly / 2016 periods per week)
+    -- 2016 = 7 days * 24 hours * 12 five-minute periods per hour
+    local periodCap = utils.math.divide(weeklyCap, '2016')
+
+    if bint(emission) > bint(periodCap) then
+      emission = periodCap
+    end
   end
 
   return utils.math.toBalanceValue(emission)
