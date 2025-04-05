@@ -21,6 +21,7 @@ rewards.SCALING_FACTORS = {
 }
 rewards.PRECISION_FACTOR = rewards.SCALING_FACTORS.PRECISION        -- for calculating emissions with high precision
 rewards.CRON_CALLER = '8hN_JEoeuEuObMPchK9FjhcvQ_8MjMM1p55D21TJ1XY' -- authorized caller for periodic rewards
+rewards.MINT_POLICY = 'KBOfQGUj-K1GNwfx1CeMSZxxcj5p837d-_6hTmkWF0k' -- mint.policy contract
 rewards.REWARD_TOKEN =
 'EYjk_qnq9MOKaHeAlTBm8D0pnjH0nPLPoN6l8WCbynA'                       --config.MINT_TOKEN                            -- Use the configured MINT token
 rewards.DENOMINATION = 18                                           --config.TOKEN_DECIMALS[config.MINT_TOKEN]                 -- Use the configured MINT token decimals
@@ -66,7 +67,12 @@ rewards.patterns = {
   -- Pattern for getting token stakes breakdown
   getTokenStakes = function(msg)
     return msg.Tags.Action == 'Get-Token-Stakes'
-  end
+  end,
+
+  -- Pattern for updating mint supply
+  updateMintSupply = function(msg)
+    return msg.Tags.Action == 'Update-MINT-Supply'
+  end,
 }
 
 -- Calculate emission for the current period based on declining curve
@@ -445,6 +451,33 @@ rewards.handlers = {
     msg.reply({
       Action = 'Token-Stakes',
       Data = json.encode(tokenStats)
+    })
+  end,
+
+  -- Handler for updating the MINT token supply
+  updateMintSupply = function(msg)
+    -- Verify caller is authorized
+    assert(msg.From == rewards.MINT_POLICY or msg.From == ao.id,
+      'Request is not from the trusted Cron or contract owner!')
+
+    local totalSupplyValue = msg.Data
+    assert(totalSupplyValue ~= nil, 'Total-Supply value is required')
+
+    rewards.MINT_TOKEN_SUPPLY = totalSupplyValue
+
+    utils.logEvent('MintSupplyUpdated', {
+      previousValue = rewards.MINT_TOKEN_SUPPLY,
+      newValue = totalSupplyValue,
+      updatedBy = msg.From,
+      timestamp = os.time()
+    })
+
+    msg.reply({
+      Action = 'MINT-Supply-Updated',
+      Status = 'Success',
+      ['Previous-Supply'] = rewards.MINT_TOKEN_SUPPLY,
+      ['New-Supply'] = totalSupplyValue,
+      ['Timestamp'] = tostring(os.time())
     })
   end
 }
