@@ -11,7 +11,7 @@ local json = require('json')
 local rewards = {}
 
 -- Constants for emission calculations
-rewards.TOTAL_SUPPLY = 5000000 * 10 ^ 8                             -- 5M tokens with 8 decimal places
+-- 5M tokens with 8 decimal places
 rewards.EMISSION_RATE_PER_MONTH = 0.0285                            -- 1.425% monthly rate
 rewards.PERIODS_PER_MONTH = 8640                                    -- number of 5-minute periods in a month (30 days * 24 hours * 60 minutes / 5)
 rewards.SCALING_FACTORS = {
@@ -24,8 +24,7 @@ rewards.CRON_CALLER = '8hN_JEoeuEuObMPchK9FjhcvQ_8MjMM1p55D21TJ1XY' -- authorize
 rewards.REWARD_TOKEN =
 'EYjk_qnq9MOKaHeAlTBm8D0pnjH0nPLPoN6l8WCbynA'                       --config.MINT_TOKEN                            -- Use the configured MINT token
 rewards.DENOMINATION = 18                                           --config.TOKEN_DECIMALS[config.MINT_TOKEN]                 -- Use the configured MINT token decimals
-
-
+rewards.TOTAL_SUPPLY = bint(5000000) * bint(10 ^ rewards.DENOMINATION)
 -- Initialize state variables if they don't exist
 CurrentSupply = CurrentSupply or '0'           -- tracks current supply of reward tokens
 LastRewardTimestamp = LastRewardTimestamp or 0 -- tracks last time rewards were distributed
