@@ -89,6 +89,7 @@ TOTAL_THEORETICAL_SUPPLY = TOTAL_THEORETICAL_SUPPLY or
 ---@type string
 TotalGons = TotalGons or utils.toBalanceValue(bint(TOTAL_THEORETICAL_SUPPLY) * bint(10 ^ 18))
 
+---@diagnostic disable-next-line: undefined-doc-name
 ---@type Bint
 GonsPerToken = GonsPerToken or bint.zero()
 if (GonsPerToken == bint.zero()) then
