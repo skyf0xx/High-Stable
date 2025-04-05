@@ -263,6 +263,7 @@ rewards.handlers = {
           Action = 'Transfer',
           Recipient = staker,
           Quantity = amount,
+          Cast = 'true',
           ['X-Reward-Type'] = 'Staking-Reward',
           ['X-Distribution-Time'] = tostring(currentTime)
         })
