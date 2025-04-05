@@ -67,7 +67,7 @@ rewards.patterns = {
 -- Calculate emission for the current period based on declining curve
 local function calculateEmission()
   -- Convert values to bint early to avoid overflow
-  local totalSupplyBint = bint(rewards.TOTAL_SUPPLY)
+  local totalSupplyBint = rewards.TOTAL_SUPPLY
   local currentSupplyBint = bint(CurrentSupply)
   local remainingSupply = totalSupplyBint - currentSupplyBint
 
@@ -296,7 +296,7 @@ rewards.handlers = {
 
   -- Handler for getting reward statistics
   getRewardStats = function(msg)
-    local totalSupplyBint = bint(rewards.TOTAL_SUPPLY)
+    local totalSupplyBint = rewards.TOTAL_SUPPLY
     local currentSupplyBint = bint(CurrentSupply)
     local remainingSupply = totalSupplyBint - currentSupplyBint
 
