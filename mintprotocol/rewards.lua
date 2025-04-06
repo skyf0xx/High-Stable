@@ -28,7 +28,8 @@ rewards.DENOMINATION = config.TOKEN_DECIMALS
 rewards.TOTAL_SUPPLY = bint(5000000) * bint(10 ^ rewards.DENOMINATION)
 rewards.MINT_BURN_RATE_WEEKLY = 0.0025                              -- 0.25% weekly burn rate from mint.policy
 rewards.CAP_PERCENTAGE = 0.45                                       -- Cap at 45% of weekly burn (safely under 50%)
-rewards.MINT_TOKEN_SUPPLY = '0'                                     -- Initialize with zero, will be updated
+rewards.MINT_TOKEN_SUPPLY = rewards.MINT_TOKEN_SUPPLY or
+'0'                                                                 -- Initialize with zero, will be updated
 
 -- Initialize state variables if they don't exist
 CurrentSupply = CurrentSupply or '0'           -- tracks current supply of reward tokens
