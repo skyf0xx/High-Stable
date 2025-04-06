@@ -22,9 +22,9 @@ rewards.SCALING_FACTORS = {
 rewards.PRECISION_FACTOR = rewards.SCALING_FACTORS.PRECISION        -- for calculating emissions with high precision
 rewards.CRON_CALLER = '8hN_JEoeuEuObMPchK9FjhcvQ_8MjMM1p55D21TJ1XY' -- authorized caller for periodic rewards
 rewards.MINT_POLICY = 'KBOfQGUj-K1GNwfx1CeMSZxxcj5p837d-_6hTmkWF0k' -- mint.policy contract
-rewards.REWARD_TOKEN =
-'EYjk_qnq9MOKaHeAlTBm8D0pnjH0nPLPoN6l8WCbynA'                       --config.MINT_TOKEN                            -- Use the configured MINT token
-rewards.DENOMINATION = 18                                           --config.TOKEN_DECIMALS[config.MINT_TOKEN]                 -- Use the configured MINT token decimals
+rewards.REWARD_TOKEN = config.MINT_TOKEN                            -- Use the configured MINT token
+rewards.DENOMINATION = config.TOKEN_DECIMALS
+                             [config.MINT_TOKEN]                    -- Use the configured MINT token decimals
 rewards.TOTAL_SUPPLY = bint(5000000) * bint(10 ^ rewards.DENOMINATION)
 rewards.MINT_BURN_RATE_WEEKLY = 0.0025                              -- 0.25% weekly burn rate from mint.policy
 rewards.CAP_PERCENTAGE = 0.45                                       -- Cap at 45% of weekly burn (safely under 50%)
