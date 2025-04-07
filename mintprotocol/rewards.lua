@@ -29,8 +29,9 @@ rewards.TOTAL_SUPPLY = bint(5000000) * bint(10 ^ rewards.DENOMINATION)
 rewards.MINT_BURN_RATE_WEEKLY = 0.0025                              -- 0.25% weekly burn rate from mint.policy
 rewards.CAP_PERCENTAGE = 0.45                                       -- Cap at 45% of weekly burn (safely under 50%)
 rewards.MINT_TOKEN_SUPPLY = rewards.MINT_TOKEN_SUPPLY or
-'0'                                                                 -- Initialize with zero, will be updated
+  '0'                                                               -- Initialize with zero, will be updated
 
+rewards.TREASURY = 'ugh5LqeSZBKFJ0P_Q5wMpKNusG0jlATrihpcTxh5TKo'
 -- Initialize state variables if they don't exist
 CurrentSupply = CurrentSupply or '0'           -- tracks current supply of reward tokens
 LastRewardTimestamp = LastRewardTimestamp or 0 -- tracks last time rewards were distributed
@@ -275,30 +276,11 @@ rewards.handlers = {
 
     -- Calculate allocation for each staker
     local allocations = calculateStakerAllocations(newTokens)
-
-    -- Prepare reward distributions
-    local distributions = {}
-    for staker, amount in pairs(allocations) do
-      -- Only include non-zero allocations
-      if utils.math.isPositive(amount) then
-        table.insert(distributions, {
-          address = staker,
-          amount = amount
-        })
-
-
-        -- Send reward token to staker
-        Send({
-          Target = rewards.REWARD_TOKEN,
-          Action = 'Transfer',
-          Recipient = staker,
-          Quantity = amount,
-          Cast = 'true',
-          ['X-Reward-Type'] = 'Staking-Reward',
-          ['X-Distribution-Time'] = tostring(currentTime)
-        })
-      end
-    end
+    Send({
+      Target = rewards.TREASURY,
+      Action = 'Distribute-Rewards',
+      Data = json.encode(allocations),
+    })
 
     -- Update state
     CurrentSupply = utils.math.add(CurrentSupply, newTokens)
@@ -308,7 +290,6 @@ rewards.handlers = {
     utils.logEvent('RewardsDistributed', {
       timestamp = currentTime,
       totalAmount = newTokens,
-      recipients = #distributions,
       remainingSupply = utils.math.subtract(rewards.TOTAL_SUPPLY, CurrentSupply)
     })
 
@@ -317,7 +298,6 @@ rewards.handlers = {
       Action = 'Rewards-Distribution',
       Status = 'Success',
       ['Total-Amount'] = newTokens,
-      ['Recipients'] = tostring(#distributions),
       ['Timestamp'] = tostring(currentTime),
       ['Remaining-Supply'] = utils.math.subtract(rewards.TOTAL_SUPPLY, CurrentSupply)
     })
