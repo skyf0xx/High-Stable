@@ -33,7 +33,7 @@ rewards.MINT_TOKEN_SUPPLY = rewards.MINT_TOKEN_SUPPLY or
 
 rewards.TREASURY = 'ugh5LqeSZBKFJ0P_Q5wMpKNusG0jlATrihpcTxh5TKo'
 -- Initialize state variables if they don't exist
-CurrentSupply = CurrentSupply or '0'           -- tracks current supply of reward tokens
+CurrentRewards = CurrentRewards or '0'         -- tracks current supply of reward tokens
 LastRewardTimestamp = LastRewardTimestamp or 0 -- tracks last time rewards were distributed
 TokenWeights = TokenWeights or {}              -- weights for each stakeable token
 
@@ -81,11 +81,11 @@ rewards.patterns = {
 local function calculateEmission()
   -- Convert values to bint early to avoid overflow
   local totalSupplyBint = rewards.TOTAL_SUPPLY
-  local currentSupplyBint = bint(CurrentSupply)
-  local remainingSupply = totalSupplyBint - currentSupplyBint
+  local currentRewardsBint = bint(CurrentRewards)
+  local remainingRewards = totalSupplyBint - currentRewardsBint
 
   -- If no supply remaining, return 0
-  if remainingSupply <= bint.zero() then
+  if remainingRewards <= bint.zero() then
     return '0'
   end
 
@@ -96,11 +96,11 @@ local function calculateEmission()
 
   -- Calculate tokens to emit this period
   -- First multiply by rate, then divide by 10^8 to get back to normal scale
-  local emission = bint.__idiv(remainingSupply * periodRateBint, bint(10 ^ 8))
+  local emission = bint.__idiv(remainingRewards * periodRateBint, bint(10 ^ 8))
 
   -- Double check we don't exceed remaining supply
-  if emission > remainingSupply then
-    emission = remainingSupply
+  if emission > remainingRewards then
+    emission = remainingRewards
   end
 
   -- Calculate cap based on mint.policy burn rate
@@ -283,14 +283,14 @@ rewards.handlers = {
     })
 
     -- Update state
-    CurrentSupply = utils.math.add(CurrentSupply, newTokens)
+    CurrentRewards = utils.math.add(CurrentRewards, newTokens)
     LastRewardTimestamp = currentTime
 
     -- Log the distribution
     utils.logEvent('RewardsDistributed', {
       timestamp = currentTime,
       totalAmount = newTokens,
-      remainingSupply = utils.math.subtract(rewards.TOTAL_SUPPLY, CurrentSupply)
+      remainingRewards = utils.math.subtract(rewards.TOTAL_SUPPLY, CurrentRewards)
     })
 
     -- Reply with distribution summary
@@ -299,7 +299,7 @@ rewards.handlers = {
       Status = 'Success',
       ['Total-Amount'] = newTokens,
       ['Timestamp'] = tostring(currentTime),
-      ['Remaining-Supply'] = utils.math.subtract(rewards.TOTAL_SUPPLY, CurrentSupply)
+      ['Remaining-Supply'] = utils.math.subtract(rewards.TOTAL_SUPPLY, CurrentRewards)
     })
   end,
 
@@ -308,24 +308,24 @@ rewards.handlers = {
   -- Handler for getting reward statistics
   getRewardStats = function(msg)
     local totalSupplyBint = rewards.TOTAL_SUPPLY
-    local currentSupplyBint = bint(CurrentSupply)
-    local remainingSupply = totalSupplyBint - currentSupplyBint
+    local currentRewardsBint = bint(CurrentRewards)
+    local remainingRewards = totalSupplyBint - currentRewardsBint
 
     -- Calculate daily emission rate
     local dailyEmission = '0'
-    if remainingSupply > bint.zero() then
+    if remainingRewards > bint.zero() then
       local periodRateFixed = math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8)
       local periodRateBint = bint(periodRateFixed)
       dailyEmission = utils.math.toBalanceValue(
-        bint.__idiv(remainingSupply * periodRateBint * bint(288), bint(10 ^ 8))
+        bint.__idiv(remainingRewards * periodRateBint * bint(288), bint(10 ^ 8))
       )
     end
 
     -- Prepare statistics
     local stats = {
       totalSupply = utils.math.toBalanceValue(totalSupplyBint),
-      currentSupply = utils.math.toBalanceValue(currentSupplyBint),
-      remainingSupply = utils.math.toBalanceValue(remainingSupply),
+      currentRewards = utils.math.toBalanceValue(currentRewardsBint),
+      remainingRewards = utils.math.toBalanceValue(remainingRewards),
       dailyEmissionRate = dailyEmission,
       lastDistribution = LastRewardTimestamp,
       uniqueStakers = countUniqueStakers(),
@@ -337,8 +337,8 @@ rewards.handlers = {
       Action = 'Reward-Stats',
       Data = json.encode(stats),
       ['Total-Supply'] = utils.math.toBalanceValue(totalSupplyBint),
-      ['Current-Supply'] = utils.math.toBalanceValue(currentSupplyBint),
-      ['Remaining-Supply'] = utils.math.toBalanceValue(remainingSupply),
+      ['Current-Supply'] = utils.math.toBalanceValue(currentRewardsBint),
+      ['Remaining-Supply'] = utils.math.toBalanceValue(remainingRewards),
       ['Daily-Emission'] = dailyEmission,
       ['Last-Distribution'] = tostring(LastRewardTimestamp),
       ['Unique-Stakers'] = tostring(stats.uniqueStakers)
