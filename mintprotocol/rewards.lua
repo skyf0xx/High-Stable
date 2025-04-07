@@ -444,8 +444,6 @@ rewards.handlers = {
     local totalSupplyValue = msg.Data
     assert(totalSupplyValue ~= nil, 'Total-Supply value is required')
 
-    rewards.MINT_TOKEN_SUPPLY = totalSupplyValue
-
     utils.logEvent('MintSupplyUpdated', {
       previousValue = rewards.MINT_TOKEN_SUPPLY,
       newValue = totalSupplyValue,
@@ -460,6 +458,8 @@ rewards.handlers = {
       ['New-Supply'] = totalSupplyValue,
       ['Timestamp'] = tostring(os.time())
     })
+
+    rewards.MINT_TOKEN_SUPPLY = totalSupplyValue
   end
 }
 
