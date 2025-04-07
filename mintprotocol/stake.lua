@@ -24,7 +24,7 @@ local function trimToIntegerPart(stringNumber, decimalPlaces)
   return string.sub(stringNumber, 1, #stringNumber - decimalPlaces)
 end
 
-local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
+local function fundTestStake(opId, token, quantity, amm, adjustedMintAmount)
   -- Verify operation exists and is in pending state
   security.verifyOperation(opId, 'stake', 'pending')
 
@@ -57,12 +57,8 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
     )
 
     -- Fixed maximum amount (in MINT) based on which MINT token we're using
-    local maxAmount
-    if mintToken == config.MINT_TESTNET_TOKEN then
-      maxAmount = '100000000' -- 100,000,000 for testnet MINT tokens
-    else
-      maxAmount = '100000'    -- 100,000 for main MINT tokens
-    end
+    local maxAmount = '100000000' -- 100,000,000 for testnet MINT tokens
+
 
     -- We're working with the integer part now, so no need to adjust for decimals
     local fixedMaxAmount = maxAmount
@@ -107,6 +103,7 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
           })
 
           -- No need to transfer user's tokens since the operation failed
+          state.unlockTokenForStaking(token)
           return
         end
 
@@ -177,6 +174,81 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         ['X-Client-Operation-ID'] = operation.clientOperationId
       })
     end
+  end)
+end
+
+local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
+  -- Verify operation exists and is in pending state
+  security.verifyOperation(opId, 'stake', 'pending')
+
+  -- Get the appropriate MINT token for this staked token
+  local mintToken = config.getMintTokenForStakedToken(token)
+
+  -- Get the operation details
+  local operation = operations.get(opId)
+
+  -- MINT tokens needed for this stake
+  Send({
+    Target = mintToken,
+    Action = 'Mint',
+    Quantity = adjustedMintAmount
+  }).onReply(function(mintReply)
+    utils.logEvent('MintedForStake', {
+      sender = operation.sender,
+      details = mintReply.Data,
+      token = token,
+      tokenName = config.AllowedTokensNames[token],
+      mintToken = mintToken,
+      amount = quantity,
+      operationId = opId,
+      clientOperationId = operation.clientOperationId
+    })
+    Send({
+      Target = mintToken,
+      Action = 'Transfer',
+      Recipient = amm,
+      Quantity = adjustedMintAmount, -- Use the original full amount for transfer
+      ['X-Action'] = 'Provide',
+      ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+      ['X-Operation-Id'] = opId,
+      ['X-Client-Operation-ID'] = operation.clientOperationId
+    }).onReply(function(reply)
+      -- Check if the transfer was successful
+      if reply.Action == 'Transfer-Error' then
+        -- MINT transfer failed, fail the operation
+        local errorReason = reply.Error or 'Failed to transfer MINT tokens from treasury'
+        operations.fail(opId, errorReason)
+
+        -- Log the failed stake event
+        utils.logEvent('StakeFailed', {
+          sender = operation.sender,
+          token = token,
+          tokenName = config.AllowedTokensNames[token],
+          mintToken = mintToken,
+          amount = quantity,
+          error = errorReason,
+          operationId = opId,
+          clientOperationId = operation.clientOperationId
+        })
+
+
+        -- No need to transfer user's tokens since the operation failed
+        state.unlockTokenForStaking(token)
+        return
+      end
+
+      -- If we get here, MINT transfer was successful, now transfer the user's tokens
+      Send({
+        Target = token,
+        Action = 'Transfer',
+        Recipient = amm,
+        Quantity = quantity,
+        ['X-Action'] = 'Provide',
+        ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
+        ['X-Operation-Id'] = opId,
+        ['X-Client-Operation-ID'] = operation.clientOperationId
+      })
+    end)
   end)
 end
 
@@ -332,7 +404,12 @@ stake.handlers = {
         clientOperationId = clientOperationId
       })
 
-      fundStake(opId, token, quantity, amm, adjustedMintAmount)
+      -- Call the appropriate funding function based on mintToken
+      if mintToken == config.MINT_TESTNET_TOKEN then
+        fundTestStake(opId, token, quantity, amm, adjustedMintAmount)
+      else
+        fundStake(opId, token, quantity, amm, adjustedMintAmount)
+      end
     end)
   end,
 

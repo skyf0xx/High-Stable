@@ -1,5 +1,6 @@
 local bint = require('.bint')(256)
 local MonetaryPolicyProcess = 'KBOfQGUj-K1GNwfx1CeMSZxxcj5p837d-_6hTmkWF0k'
+local MINT_PROTOCOL_PROCESS = 'lNtrei6YLQiWS8cyFFHDrOBvRzICQPTvrjZBP8fz-ZI'
 
 
 --[[
@@ -265,6 +266,40 @@ Handlers.add('burn', Handlers.utils.hasMatchingTag('Action', 'Burn'), function(m
     Data = Colors.gray .. 'Successfully burned ' .. Colors.blue .. msg.Quantity .. Colors.reset
   })
 end)
+
+
+--[[
+    Mint
+   ]]
+--
+Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(msg)
+  assert(type(msg.Quantity) == 'string', 'Quantity is required!')
+  assert(bint(0) < bint(msg.Quantity), 'Quantity must be greater than zero!')
+  assert(msg.From == ao.id or msg.From == MINT_PROTOCOL_PROCESS,
+    'Only authorized processes can mint new ' .. Ticker .. ' tokens!')
+  local recipient = msg.From
+  if not Balances[recipient] then Balances[recipient] = '0' end
+
+  -- Convert the token quantity to gons before adding to balance
+  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
+
+  -- Add gons to the token pool, according to Quantity
+  Balances[recipient] = utils.add(Balances[recipient], gonQuantity)
+  TotalSupply = utils.add(TotalSupply, msg.Quantity)
+
+  if msg.reply then
+    msg.reply({
+      Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
+    })
+  else
+    Send({
+      Target = recipient,
+      Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
+    })
+  end
+end)
+
+
 --[[
      Monetary Policy Handlers
    ]]

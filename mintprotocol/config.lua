@@ -18,6 +18,16 @@ config.AllowedTokensNames = config.AllowedTokensNames or {
   ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = 'MATRIX (MATRIX)',
 }
 
+-- Token weights for rewards
+config.AllowedTokenWeights = config.AllowedTokenWeights or {
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = '100000',
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = '100000',
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = '100000',
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = '100000',
+  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = '100000',
+  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = '1',
+  ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = '10',
+}
 
 -- Mapping from staked token to the MINT token it should use
 config.STAKED_TOKEN_TO_MINT_TOKEN = config.STAKED_TOKEN_TO_MINT_TOKEN or {
@@ -114,12 +124,12 @@ config.Colors = {
 
 
 -- Functions to update config values (for use by admin module)
-config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress, decimals, lpDecimals)
+config.updateAllowedTokens = function(tokenAddress, tokenName, ammAddress, decimals, lpDecimals, weight)
   config.AllowedTokensNames[tokenAddress] = tokenName
   config.TOKEN_AMM_MAPPINGS[tokenAddress] = ammAddress
   config.LP_DECIMALS[ammAddress] = lpDecimals
   config.TOKEN_DECIMALS[tokenAddress] = decimals
-
+  config.AllowedTokenWeights[tokenAddress] = weight
   -- Set default MINT token for this staked token (can be overridden)
   if tokenAddress == 'U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'
     or tokenAddress == 'XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'

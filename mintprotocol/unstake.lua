@@ -107,6 +107,27 @@ local function calculateRebasedMintAmount(initialAmount, stakedDate, currentDate
   return rebasedAmount
 end
 
+-- Helper function to burn remaining MINT tokens after profit distribution
+local function burnRemainingMintTokens(mintToken, remainingAmount, operation)
+  -- Only burn if this is the main MINT token, not testnet MINT
+  if mintToken == config.MINT_TOKEN and utils.math.isPositive(remainingAmount) then
+    utils.logEvent('BurningRemainingMint', {
+      mintToken = mintToken,
+      amount = remainingAmount,
+      operationId = operation.id,
+      sender = operation.sender
+    })
+
+    Send({
+      Target = mintToken,
+      Action = 'Burn',
+      Quantity = remainingAmount,
+      ['X-Operation-Id'] = operation.id,
+      ['X-Reason'] = 'Unused MINT tokens from unstaking'
+    })
+  end
+end
+
 -- Helper function to handle MINT token profit sharing with rebasing adjustments
 local function handleMintTokenProfitSharing(tokenData, operation)
   -- Get the appropriate MINT token for this staked token
@@ -115,7 +136,7 @@ local function handleMintTokenProfitSharing(tokenData, operation)
   -- If initial amount is zero or withdrawnMintToken is less than or equal to zero, there's no profit
   if utils.math.isZero(tokenData.initialMintTokenAmount) or
     not utils.math.isPositive(tokenData.withdrawnMintToken) then
-    return '0' -- No profit to share
+    return '0', '0' -- No profit to share, no remaining tokens
   end
 
   -- Calculate what the initial amount would be worth now, after rebasing
@@ -128,7 +149,7 @@ local function handleMintTokenProfitSharing(tokenData, operation)
 
   -- If withdrawn amount is less than the rebased initial amount, there's no profit
   if utils.math.isLessThan(tokenData.withdrawnMintToken, rebasedInitialAmount) then
-    return '0'
+    return '0', tokenData.withdrawnMintToken -- No profit, all tokens are remaining
   end
 
   -- Calculate actual profit by comparing withdrawn amount to rebased initial amount
@@ -149,7 +170,7 @@ local function handleMintTokenProfitSharing(tokenData, operation)
     Quantity = userShare,
     ['X-MINT-Profit-Share'] = 'true',
     ['X-Operation-Id'] = operation.id,
-    ['X-Rebased-Initial-Amount'] = rebasedInitialAmount -- Add this for transparency
+    ['X-Rebased-Initial-Amount'] = rebasedInitialAmount
   })
 
   -- Log MINT profit sharing with rebasing info
@@ -166,7 +187,9 @@ local function handleMintTokenProfitSharing(tokenData, operation)
     operationId = operation.id
   })
 
-  return userShare
+  local remainingMint = utils.math.subtract(tokenData.withdrawnMintToken, userShare)
+
+  return userShare, remainingMint
 end
 
 
@@ -230,10 +253,15 @@ local function processUnstake(operationId)
 
   -- Mark operation as completed (checks-effects-interactions)
   operations.complete(operationId)
+
   -- Process impermanent loss and profit sharing
   local ilAmount = impermanent_loss.processCompensation(tokenData, operation)
   local userTokenResults = handleUserTokenProfitSharing(tokenData, operation)
-  local mintProfitShare = handleMintTokenProfitSharing(tokenData, operation)
+  local mintProfitShare, remainingMint = handleMintTokenProfitSharing(tokenData, operation)
+
+  -- Burn remaining MINT tokens if appropriate
+  burnRemainingMintTokens(mintToken, remainingMint, operation)
+
   -- Send tokens and notify user
   local results = {
     amountToSendUser = userTokenResults.amountToSendUser,
@@ -241,13 +269,15 @@ local function processUnstake(operationId)
     feeShareAmount = userTokenResults.feeShareAmount,
     mintProfitShare = mintProfitShare
   }
+
   sendTokensAndNotify(operation, tokenData, results)
+
   -- Log unstake completed
   utils.logEvent('UnstakeComplete', {
     sender = operation.sender,
     token = operation.token,
     tokenName = config.AllowedTokensNames[operation.token],
-    mintToken = mintToken, -- Log which MINT token was used
+    mintToken = mintToken,
     initialAmount = tokenData.initialUserTokenAmount,
     withdrawnAmount = tokenData.withdrawnUserToken,
     lpTokensBurned = tokenData.burnedLpTokens,

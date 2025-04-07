@@ -19,11 +19,13 @@ cron.caller.stats.lua --> "Cron NAB Ecosystem Stats" (iAEDZ6Y_wpEcksEzypVYhI01Sh
 cron.caller.allowed.tokens.lua --> "Cron NAB Allowed Tokens" (pn2IDtbofqxWXyj9W6eXtdp4C7JZ1oJaM81l12ygqYc) every 24 hours
 cron.caller.allowed.tokens.secondary.lua --> "Cron NAB Allowed Tokens Secondary Data" (BNGGjJMLRKou_dimjmodfEeEL77CZCdRmT3Rc3yyZss) every 25 hours
 cron.caller.mint.policy.lua --> "Cron MINT Policy" (fzBx5uPGi2e_dBbBvwKlh6BbrTLyVJ1YVGlFS1el0uI)
+cron.caller.mint.rewards.lua --> "Cron MINT Protocol Rewards" (8hN_JEoeuEuObMPchK9FjhcvQ_8MjMM1p55D21TJ1XY)
 
 MINT
 mint.lua --> "MINT" (SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0)
 mint.policy.lua --> "MINT Policy" (KBOfQGUj-K1GNwfx1CeMSZxxcj5p837d-_6hTmkWF0k)
 mint-protocol.lua --> "MINT Protocol" (lNtrei6YLQiWS8cyFFHDrOBvRzICQPTvrjZBP8fz-ZI)
+rewards.treasury.lua --> "MINT Protocol Rewards Treasury" (ugh5LqeSZBKFJ0P_Q5wMpKNusG0jlATrihpcTxh5TKo)
 
 OPERATIONS
 maintenance.lua --> "Maintenance" (SpkZWLmuKAQ3vIK_1ErUndUxA372HxPtB5ncxa2V9VM)

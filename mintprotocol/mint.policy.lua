@@ -26,6 +26,7 @@ local utils = {
 local Denomination = 8
 local TRUSTED_CRON = 'fzBx5uPGi2e_dBbBvwKlh6BbrTLyVJ1YVGlFS1el0uI'
 local MINT_TOKEN = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'
+local MINT_PROTOCOL = 'lNtrei6YLQiWS8cyFFHDrOBvRzICQPTvrjZBP8fz-ZI'
 local WEEKLY_BURN_RATE = 0.0025                                         -- 0.25%
 local FINAL_SUPPLY = utils.toBalanceValue(21000000 * 10 ^ Denomination) -- 21M tokens with 8 decimal places
 local PRECISION_FACTOR = bint(10 ^ Denomination)                        -- For percentage calculations
@@ -68,6 +69,12 @@ Handlers.add('update-supply', Handlers.utils.hasMatchingTag('Action', 'Update-Su
           Target = MINT_TOKEN,
           Action = 'Rebase',
           NewSupply = newSupply
+        })
+
+        ao.send({
+          Target = MINT_PROTOCOL,
+          Action = 'Update-MINT-Supply',
+          Data = newSupply
         })
       else
         -- If we would go below final supply, set to final supply
