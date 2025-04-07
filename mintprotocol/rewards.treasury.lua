@@ -65,15 +65,17 @@ local function trackRewards(address, amount)
     }
   end
 
+  local time = os.time()
+
   -- Update rewards tracking
   AccumulatedRewards[address].total = utils.math.add(AccumulatedRewards[address].total, amount)
   AccumulatedRewards[address].lastReceived = amount
-  AccumulatedRewards[address].lastDistributionTime = os.time()
+  AccumulatedRewards[address].lastDistributionTime = time
   AccumulatedRewards[address].distributions = AccumulatedRewards[address].distributions + 1
 
   -- Update global tracking
   TotalDistributedRewards = utils.math.add(TotalDistributedRewards, amount)
-  LastDistributionTime = os.time()
+  LastDistributionTime = time
 end
 
 --[[
