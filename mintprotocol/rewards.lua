@@ -346,6 +346,7 @@ rewards.handlers = {
   end,
 
   -- Handler for getting stake ownership percentage
+  -- Handler for getting stake ownership percentage
   getStakeOwnership = function(msg)
     -- Input validation
     local staker = msg.Tags.Staker
@@ -356,6 +357,16 @@ rewards.handlers = {
     local totalWeight = ownershipData.totalWeight
     local stakerWeight = ownershipData.stakerWeight
 
+    -- Gather token weights info with names
+    local tokenWeightsInfo = {}
+    for tokenAddr, weight in pairs(TokenWeights) do
+      table.insert(tokenWeightsInfo, {
+        address = tokenAddr,
+        name = config.AllowedTokensNames[tokenAddr] or 'Unknown Token',
+        weight = weight
+      })
+    end
+
     -- Handle case where there are no stakes
     if utils.math.isZero(totalWeight) then
       msg.reply({
@@ -365,7 +376,8 @@ rewards.handlers = {
         Data = json.encode({
           percentage = '0.000000',
           stakerWeight = '0',
-          totalWeight = '0'
+          totalWeight = '0',
+          tokenWeights = tokenWeightsInfo
         })
       })
       return
@@ -386,7 +398,8 @@ rewards.handlers = {
       Data = json.encode({
         percentage = ownershipPercentageStr,
         stakerWeight = stakerWeight,
-        totalWeight = totalWeight
+        totalWeight = totalWeight,
+        tokenWeights = tokenWeightsInfo
       })
     })
   end,
