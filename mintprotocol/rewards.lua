@@ -286,12 +286,6 @@ rewards.handlers = {
     CurrentRewards = utils.math.add(CurrentRewards, newTokens)
     LastRewardTimestamp = currentTime
 
-    -- Log the distribution
-    utils.logEvent('RewardsDistributed', {
-      timestamp = currentTime,
-      totalAmount = newTokens,
-      remainingRewards = utils.math.subtract(rewards.TOTAL_SUPPLY, CurrentRewards)
-    })
 
     -- Reply with distribution summary
     msg.reply({
