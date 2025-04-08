@@ -371,14 +371,12 @@ rewards.handlers = {
       return
     end
 
-    -- Calculate ownership percentage with 6 decimal places of precisionse
-    local scaledStakerWeight = utils.math.multiply(stakerWeight, '100')
-    scaledStakerWeight = utils.math.multiply(scaledStakerWeight, tostring(rewards.PRECISION_FACTOR))
-    local ownershipPercentageBint = utils.math.divide(scaledStakerWeight, totalWeight)
+    -- Calculate ownership percentage with 6 decimal places of precision
+    local scaledStakerWeight = utils.math.multiply(stakerWeight, '100000000') -- Scale up for percentage calculation
+    local ownershipPercentage = utils.math.divide(scaledStakerWeight, totalWeight)
 
-    -- Convert to string with proper decimal places
-    local percentageValue = utils.math.divide(ownershipPercentageBint, tostring(rewards.PRECISION_FACTOR))
-    local ownershipPercentageStr = string.format('%.6f', tonumber(percentageValue))
+    -- Format to 6 decimal places
+    local ownershipPercentageStr = string.format('%.6f', tonumber(ownershipPercentage) / 1000000)
 
     -- Reply with ownership details
     msg.reply({
