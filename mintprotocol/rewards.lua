@@ -75,6 +75,11 @@ rewards.patterns = {
   updateMintSupply = function(msg)
     return msg.Tags.Action == 'Update-MINT-Supply'
   end,
+
+  -- Pattern for updating mint supply
+  distributeRewardsResponse = function(msg)
+    return msg.Tags.Action == 'Distribute-Rewards-Response'
+  end,
 }
 
 -- Calculate emission for the current period based on declining curve
@@ -519,7 +524,15 @@ rewards.handlers = {
     })
 
     rewards.MINT_TOKEN_SUPPLY = totalSupplyValue
+  end,
+
+  distributeRewardsResponse = function(msg)
+    -- empty handler to prevent message from going to cli
   end
 }
+
+
+
+
 
 return rewards

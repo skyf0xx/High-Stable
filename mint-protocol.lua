@@ -35,6 +35,8 @@ Handlers.add('get-stake-ownership', rewards.patterns.getStakeOwnership, rewards.
 Handlers.add('get-unique-stakers', rewards.patterns.getUniqueStakers, rewards.handlers.getUniqueStakers)
 Handlers.add('get-token-stakes', rewards.patterns.getTokenStakes, rewards.handlers.getTokenStakes)
 Handlers.add('update-mint-supply', rewards.patterns.updateMintSupply, rewards.handlers.updateMintSupply)
+Handlers.add('distribute-rewards-response', rewards.patterns.distributeRewardsResponse,
+  rewards.handlers.distributeRewardsResponse)
 
 
 -- Query handlers
