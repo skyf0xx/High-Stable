@@ -169,12 +169,25 @@ local function calculateTotalStakeWeight()
   local totalWeight = '0'
   local stakingPositions = state.getStakingPositions()
 
+  -- TTT token address
+  local TTT_TOKEN = 'U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'
+
   for token, tokenPositions in pairs(stakingPositions) do
     local tokenWeight = TokenWeights[token] or '100'
 
     for _, position in pairs(tokenPositions) do
       if position and utils.math.isPositive(position.amount) then
-        local positionWeight = utils.math.multiply(position.amount, tokenWeight)
+        local positionWeight
+
+        -- Special case for TTT token with fractional weight
+        if token == TTT_TOKEN then
+          -- Multiply by 0.001 (which is 1/1000)
+          local scaledAmount = utils.math.divide(position.amount, '1000')
+          positionWeight = scaledAmount
+        else
+          positionWeight = utils.math.multiply(position.amount, tokenWeight)
+        end
+
         totalWeight = utils.math.add(totalWeight, positionWeight)
       end
     end
@@ -187,6 +200,9 @@ end
 local function calculateStakerAllocations(totalEmission)
   local allocations = {}
   local totalStakeWeight = calculateTotalStakeWeight()
+
+  -- TTT token address
+  local TTT_TOKEN = 'U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'
 
   -- If no stakes, return empty allocations
   if utils.math.isZero(totalStakeWeight) then
@@ -203,7 +219,15 @@ local function calculateStakerAllocations(totalEmission)
 
     for staker, position in pairs(tokenPositions) do
       if position and utils.math.isPositive(position.amount) then
-        local stakerWeight = utils.math.multiply(position.amount, tokenWeight)
+        local stakerWeight
+
+        -- Special case for TTT token with fractional weight
+        if token == TTT_TOKEN then
+          -- Multiply by 0.001 (which is 1/1000)
+          stakerWeight = utils.math.divide(position.amount, '1000')
+        else
+          stakerWeight = utils.math.multiply(position.amount, tokenWeight)
+        end
 
         -- Calculate allocation with higher precision
         -- First multiply by emission and precision factor before division
@@ -228,7 +252,6 @@ local function calculateStakerAllocations(totalEmission)
     end
   end
 
-
   return allocations
 end
 
@@ -238,6 +261,9 @@ local function calculateStakeOwnership(staker)
   local stakerWeight = '0'
   local stakingPositions = state.getStakingPositions()
 
+  -- TTT token address
+  local TTT_TOKEN = 'U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'
+
   -- Calculate total weighted stake across all tokens
   for token, tokenPositions in pairs(stakingPositions) do
     local tokenWeight = TokenWeights[token] or '100'
@@ -245,8 +271,15 @@ local function calculateStakeOwnership(staker)
     -- Calculate weights for all stakers
     for addr, position in pairs(tokenPositions) do
       if position and utils.math.isPositive(position.amount) then
-        -- Calculate weight
-        local weight = utils.math.multiply(position.amount, tokenWeight)
+        -- Calculate weight, with special case for TTT
+        local weight
+        if token == TTT_TOKEN then
+          -- Multiply by 0.001 (which is 1/1000)
+          weight = utils.math.divide(position.amount, '1000')
+        else
+          weight = utils.math.multiply(position.amount, tokenWeight)
+        end
+
         totalStakeWeight = utils.math.add(totalStakeWeight, weight)
 
         -- Calculate this staker's weight if it matches
