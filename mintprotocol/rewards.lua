@@ -145,6 +145,25 @@ local function countUniqueStakers()
   return count
 end
 
+-- Get  unique stakers across all tokens
+local function uniqueStakersByAddress()
+  local seen = {}
+  local result = {}
+  local stakingPositions = state.getStakingPositions()
+
+  for _, tokenPositions in pairs(stakingPositions) do
+    for staker, position in pairs(tokenPositions) do
+      if position and utils.math.isPositive(position.amount) and not seen[staker] then
+        seen[staker] = true
+        table.insert(result, staker)
+      end
+    end
+  end
+
+  return result
+end
+
+
 -- Calculate total stake weight for all tokens
 local function calculateTotalStakeWeight()
   local totalWeight = '0'
@@ -401,11 +420,13 @@ rewards.handlers = {
   -- Handler for getting unique stakers count
   getUniqueStakers = function(msg)
     local uniqueCount = countUniqueStakers()
+    local stakers = uniqueStakersByAddress()
 
     msg.reply({
       Action = 'Unique-Stakers',
       Count = tostring(uniqueCount),
-      Data = tostring(uniqueCount)
+      Data = tostring(uniqueCount),
+      Stakers = json.encode(stakers)
     })
   end,
 
