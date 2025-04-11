@@ -180,15 +180,14 @@ local function calculateTotalStakeWeight()
   for token, tokenPositions in pairs(stakingPositions) do
     local tokenWeight = TokenWeights[token] or '100'
 
-    for _, position in pairs(tokenPositions) do
+    for staker, position in pairs(tokenPositions) do
       if position and utils.math.isPositive(position.amount) then
         local positionWeight
 
         -- Special case for TTT token with fractional weight
         if token == TTT_TOKEN then
           -- Multiply by 0.001 (which is 1/1000)
-          local scaledAmount = utils.math.divide(position.amount, '1000')
-          positionWeight = scaledAmount
+          positionWeight = utils.math.divide(position.amount, '1000')
         else
           positionWeight = utils.math.multiply(position.amount, tokenWeight)
         end
