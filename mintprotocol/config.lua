@@ -20,12 +20,12 @@ config.AllowedTokensNames = config.AllowedTokensNames or {
 
 -- Token weights for rewards
 config.AllowedTokenWeights = config.AllowedTokenWeights or {
-  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = '5000000',
-  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = '5000000',
-  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = '8000',
-  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = '10000000',
-  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = '1000000',
-  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = '1',
+  ['NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8'] = '9000000',
+  ['xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'] = '9000000',
+  ['OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'] = '10000',
+  ['0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'] = '20000000',
+  ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = '2000000',
+  ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = '0',
   ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = '1',
 }
 
