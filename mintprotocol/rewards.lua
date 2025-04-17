@@ -97,36 +97,40 @@ local function calculateEmission()
   -- Calculate the emission rate for a 5-minute period
   -- Convert rate to a fixed-point number with 8 decimal places for precision
   local periodRateFixed = math.floor((rewards.EMISSION_RATE_PER_MONTH / rewards.PERIODS_PER_MONTH) * 10 ^ 8)
-  local periodRateBint = bint(periodRateFixed)
 
-  -- Calculate tokens to emit this period
-  -- First multiply by rate, then divide by 10^8 to get back to normal scale
-  local emission = bint.__idiv(remainingRewards * periodRateBint, bint(10 ^ 8))
+  -- Use the multiply function which already handles bint conversion
+  local remainingRewardsStr = tostring(remainingRewards)
+  local periodRateStr = tostring(periodRateFixed)
 
-  -- Double check we don't exceed remaining supply
-  if emission > remainingRewards then
-    emission = remainingRewards
+  -- Calculate emission with precision maintained
+  local scaledEmission = utils.math.multiply(remainingRewardsStr, periodRateStr)
+
+  -- Then divide by precision factor (10^8)
+  local emission = utils.math.divide(scaledEmission, '100000000')
+
+  -- Ensure we don't exceed remaining supply
+  if utils.math.isGreaterThan(emission, remainingRewardsStr) then
+    emission = remainingRewardsStr
   end
 
   -- Calculate cap based on mint.policy burn rate
   local mintSupply = rewards.MINT_TOKEN_SUPPLY
+
   if mintSupply ~= '0' then
     -- Calculate weekly burn amount
     local weeklyBurnAmount = utils.math.multiply(mintSupply, tostring(rewards.MINT_BURN_RATE_WEEKLY))
-
     -- Set cap to configured percentage of weekly burn amount
     local weeklyCap = utils.math.multiply(weeklyBurnAmount, tostring(rewards.CAP_PERCENTAGE))
-
     -- Calculate 5-minute period cap (weekly / 2016 periods per week)
     -- 2016 = 7 days * 24 hours * 12 five-minute periods per hour
     local periodCap = utils.math.divide(weeklyCap, '2016')
 
-    if bint(emission) > bint(periodCap) then
+    if utils.math.isGreaterThan(emission, periodCap) then
       emission = periodCap
     end
   end
 
-  return utils.math.toBalanceValue(emission)
+  return emission
 end
 
 -- Count total unique stakers across all tokens
