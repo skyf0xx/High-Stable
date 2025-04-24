@@ -202,33 +202,33 @@ end
 -- Calculate individual staker allocations based on their stake weight
 local function calculateStakerAllocations(totalEmission)
   local allocations = {}
+  local minnows = {} -- Track stakers with small weights
   local totalStakeWeight = calculateTotalStakeWeight()
-
-
-
 
   -- If no stakes, return empty allocations
   if utils.math.isZero(totalStakeWeight) then
     return allocations
   end
 
+  -- Reserve 10% for minnows
+  local minnowsReserve = utils.math.divide(utils.math.multiply(totalEmission, '10'), '100')
+  local whalesEmission = utils.math.subtract(totalEmission, minnowsReserve)
+
   -- Track rounding errors to distribute later
   local totalAllocated = '0'
   local stakingPositions = state.getStakingPositions()
 
-  -- Calculate individual allocations with higher precision
+  -- Calculate individual allocations with higher precision for whales
   for token, tokenPositions in pairs(stakingPositions) do
     local tokenWeight = TokenWeights[token] or '100'
 
     for staker, position in pairs(tokenPositions) do
       if position and utils.math.isPositive(position.amount) then
-        local stakerWeight
-
-        stakerWeight = utils.math.multiply(position.amount, tokenWeight)
+        local stakerWeight = utils.math.multiply(position.amount, tokenWeight)
 
         -- Calculate allocation with higher precision
         -- First multiply by emission and precision factor before division
-        local weightedEmission = utils.math.multiply(totalEmission, stakerWeight)
+        local weightedEmission = utils.math.multiply(whalesEmission, stakerWeight)
         local precisionWeightedEmission = utils.math.multiply(weightedEmission, tostring(rewards.PRECISION_FACTOR))
         local allocation = utils.math.divide(precisionWeightedEmission, totalStakeWeight)
 
@@ -238,14 +238,74 @@ local function calculateStakerAllocations(totalEmission)
         -- Track total allocated
         totalAllocated = utils.math.add(totalAllocated, allocation)
 
-        -- Store allocation
+        -- Store allocation for regular stakers
         if utils.math.isPositive(allocation) then
           if not allocations[staker] then
             allocations[staker] = '0'
           end
           allocations[staker] = utils.math.add(allocations[staker], allocation)
+        elseif utils.math.isPositive(stakerWeight) then
+          -- This is a minnow (weight too small to get an allocation)
+          table.insert(minnows, {
+            staker = staker,
+            weight = stakerWeight
+          })
         end
       end
+    end
+  end
+
+  -- Sort minnows by weight from highest to lowest
+  table.sort(minnows, function(a, b)
+    return utils.math.isGreaterThan(a.weight, b.weight)
+  end)
+
+  -- Distribute minnow reserve equally, prioritizing by weight
+  if #minnows > 0 then
+    -- Calculate minnow share but ensure it's at least 1
+    local minnowShare = utils.math.divide(minnowsReserve, tostring(#minnows))
+    if utils.math.isLessThan(minnowShare, '1') then
+      minnowShare = '1'
+    end
+
+    -- Keep track of remaining reserve
+    local remainingReserve = minnowsReserve
+
+    -- Distribute to minnows until reserve is exhausted
+    for _, minnow in ipairs(minnows) do
+      -- Check if we still have enough in the reserve
+      if utils.math.isGreaterThanOrEqual(remainingReserve, minnowShare) then
+        if not allocations[minnow.staker] then
+          allocations[minnow.staker] = '0'
+        end
+        allocations[minnow.staker] = utils.math.add(allocations[minnow.staker], minnowShare)
+        totalAllocated = utils.math.add(totalAllocated, minnowShare)
+        remainingReserve = utils.math.subtract(remainingReserve, minnowShare)
+      else
+        -- We've run out of the reserve, so break the loop
+        break
+      end
+    end
+
+    -- If there's any leftover in the reserve, distribute proportionally to whales
+    if utils.math.isPositive(remainingReserve) and utils.math.isPositive(totalAllocated) then
+      for staker, allocation in pairs(allocations) do
+        local share = utils.math.divide(
+          utils.math.multiply(allocation, remainingReserve),
+          totalAllocated
+        )
+        allocations[staker] = utils.math.add(allocations[staker], share)
+      end
+    end
+  else
+    -- If no minnows, add the reserved amount back to the total allocated
+    -- and distribute proportionally to existing stakers
+    for staker, allocation in pairs(allocations) do
+      local share = utils.math.divide(
+        utils.math.multiply(allocation, minnowsReserve),
+        totalAllocated
+      )
+      allocations[staker] = utils.math.add(allocations[staker], share)
     end
   end
 
