@@ -33,6 +33,10 @@ utils.math = {
     return bint(a) > bint(b)
   end,
 
+  isGreaterThanOrEqual = function(a, b)
+    return bint(a) >= bint(b)
+  end,
+
   isLessThan = function(a, b)
     return bint(a) < bint(b)
   end,
