@@ -91,6 +91,15 @@ config.IL_MAX_COMP_PER_USER = tostring(MINT_MAX_COMP * 10 ^ MINT_DECIMALS)
 
 
 
+config.MINT_BURN_RATE_WEEKLY_NUM = 25    -- Numerator
+config.MINT_BURN_RATE_WEEKLY_DEN = 10000 -- Denominator (0.0025 = 25/10000)
+
+config.CAP_PERCENTAGE_NUM = 45           -- Numerator
+config.CAP_PERCENTAGE_DEN = 100          -- Denominator (0.45 = 45/100)
+
+
+
+
 -- Direct access to standard config values
 config.OPERATION_TIMEOUT = 3600000 -- 1 hour timeout in miliseconds
 

@@ -117,12 +117,15 @@ local function calculateEmission()
   local mintSupply = rewards.MINT_TOKEN_SUPPLY
 
   if mintSupply ~= '0' then
-    -- Calculate weekly burn amount
-    local weeklyBurnAmount = utils.math.multiply(mintSupply, tostring(rewards.MINT_BURN_RATE_WEEKLY))
-    -- Set cap to configured percentage of weekly burn amount
-    local weeklyCap = utils.math.multiply(weeklyBurnAmount, tostring(rewards.CAP_PERCENTAGE))
-    -- Calculate 5-minute period cap (weekly / 2016 periods per week)
-    -- 2016 = 7 days * 24 hours * 12 five-minute periods per hour
+    -- First multiply by numerator
+    local weeklyBurnAmount = utils.math.multiply(mintSupply, tostring(config.MINT_BURN_RATE_WEEKLY_NUM))
+    -- Then divide by denominator
+    weeklyBurnAmount = utils.math.divide(weeklyBurnAmount, tostring(config.MINT_BURN_RATE_WEEKLY_DEN))
+
+    -- Same for CAP_PERCENTAGE
+    local weeklyCap = utils.math.multiply(weeklyBurnAmount, tostring(config.CAP_PERCENTAGE_NUM))
+    weeklyCap = utils.math.divide(weeklyCap, tostring(config.CAP_PERCENTAGE_DEN))
+
     local periodCap = utils.math.divide(weeklyCap, '2016')
 
     if utils.math.isGreaterThan(emission, periodCap) then
