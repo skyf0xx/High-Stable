@@ -73,7 +73,6 @@ admin.handlers = {
   end,
 
   -- Handler for updating allowed tokens
-  -- Handler for updating allowed tokens
   updateAllowedTokens = function(msg)
     -- Verify the caller is authorized (contract owner)
     security.assertIsAuthorized(msg.From)
