@@ -16,7 +16,11 @@ config.AllowedTokensNames = config.AllowedTokensNames or {
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'Ethereum-Wrapped USDC (USDC)',
   ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'Test Tube Token (TTT)',
   ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = 'MATRIX (MATRIX)',
+  ['s6jcB3ctSbiDNwR-paJgy5iOAhahXahLul8exSLHbGE'] = 'ArcAO (GAME)',
 }
+
+
+
 
 -- Token weights for rewards
 config.AllowedTokenWeights = config.AllowedTokenWeights or {
@@ -27,6 +31,7 @@ config.AllowedTokenWeights = config.AllowedTokenWeights or {
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = '2000000',
   ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = '0',
   ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = '1',
+  ['s6jcB3ctSbiDNwR-paJgy5iOAhahXahLul8exSLHbGE'] = '2000000',
 }
 
 -- Mapping from staked token to the MINT token it should use
@@ -38,6 +43,7 @@ config.STAKED_TOKEN_TO_MINT_TOKEN = config.STAKED_TOKEN_TO_MINT_TOKEN or {
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = config.MINT_TOKEN,         -- USDC uses main MINT
   ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = config.MINT_TESTNET_TOKEN, -- Test Tube Token uses testnet MINT
   ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = config.MINT_TESTNET_TOKEN, -- MATRIX Token uses testnet MINT
+  ['s6jcB3ctSbiDNwR-paJgy5iOAhahXahLul8exSLHbGE'] = config.MINT_TOKEN,         -- GAME Token uses main MINT
 }
 
 config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
@@ -48,7 +54,9 @@ config.TOKEN_AMM_MAPPINGS = config.TOKEN_AMM_MAPPINGS or {
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 'eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY', -- MINT/ USDC AMM -
   ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 'HATiF_ca6ENn7aS5bcbkcZb7X5Nq_rhYJ7XE-YLYfuY', -- Test Tube Token/ MINT Test token AMM -
   ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] =
-  'pfRs0r3yAXR4Q9SuVMHjJadxyP9GseDRb_mkqCcIyBo'                                                    -- MATRIX/ MINT Test token AMM -
+  'pfRs0r3yAXR4Q9SuVMHjJadxyP9GseDRb_mkqCcIyBo',                                                   -- MATRIX/ MINT Test token AMM -
+  ['s6jcB3ctSbiDNwR-paJgy5iOAhahXahLul8exSLHbGE'] =
+  'wJerY4pm09KrMm18kO6fSzHJE4cOm6-hUZb_QBadxSA'                                                    -- MINT/ GAME AMM -
 
 }
 
@@ -61,6 +69,7 @@ config.LP_DECIMALS = config.LP_DECIMALS or {
   ['eKECsvAaDph0x7g8-mmrqp4skJEjBTCnykkft-HmikY'] = 12,
   ['HATiF_ca6ENn7aS5bcbkcZb7X5Nq_rhYJ7XE-YLYfuY'] = 12,
   ['pfRs0r3yAXR4Q9SuVMHjJadxyP9GseDRb_mkqCcIyBo'] = 12,
+  ['wJerY4pm09KrMm18kO6fSzHJE4cOm6-hUZb_QBadxSA'] = 12,
 }
 
 
@@ -78,6 +87,8 @@ config.TOKEN_DECIMALS = config.TOKEN_DECIMALS or {
   ['7zH9dlMNoxprab9loshv3Y7WG45DOny_Vrq9KrXObdQ'] = 6,  -- USDC (6 decimals)
   ['U09Pg31Wlasc8ox5uTDm9sjFQT8XKcCR2Ru5lmFMe2A'] = 12, -- Test Tube Token (12 decimals)
   ['XQhUXernOkcwzrNq5U1KlAhHsqLnT3kA4ccAxfQR7XM'] = 18, -- MATRIX Token (18 decimals)
+  ['s6jcB3ctSbiDNwR-paJgy5iOAhahXahLul8exSLHbGE'] = 18, -- GAME Token (18 decimals)
+
 }
 
 -- Impermanent loss protection parameters
