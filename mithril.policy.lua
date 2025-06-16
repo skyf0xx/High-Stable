@@ -2,8 +2,8 @@ local bint = require('.bint')(256)
 local ao = require('ao')
 local json = require('json')
 
-local _DEXIExchange = 'jao0bfwk99iME8aK_TJLjm8H0bwaHzNuVbKRE1jArRo'
-local _AMMPool = '2bKo3vwB1Mo5TItmxuUQzZ11JgKauU_n2IZO1G13AIk'
+local _DEXIExchange = 'Meb6GwY5I9QN77F0c5Ku2GpCFxtYyG1mfJus2GWYtII'
+local _AMMPool = 'NX9PKbLVIyka3KPZghnEekw9FB2dfzbzVabpY-ZN1Dg'
 local TOKEN_OWNER = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 
 --[[
