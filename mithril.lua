@@ -96,12 +96,17 @@ if (GonsPerToken == bint.zero()) then
   Rebase(TotalSupply)
 end
 
+if GonsPerToken > 0 and not FLPGonsPerToken then
+  FLPGonsPerToken = GonsPerToken  --lock to current value of gons per token
+end
 
 Balances = Balances or { [ao.id] = TotalGons }
 
 Name = Name or 'Number Always Bigger'
 Ticker = Ticker or 'NAB'
 Logo = Logo or 'JrGTvRHumJaXi3Y0RKS3qOdOofTo3v6FjyzI9wSpIoY'
+FLP_CONTRACT = FLP_CONTRACT or ''
+
 
 --[[
      Add handlers for each incoming Action defined by the ao Standard Token Specification
@@ -407,3 +412,22 @@ Handlers.add('balances-from-many', Handlers.utils.hasMatchingTag('Action', 'Bala
       Ticker = Ticker
     })
   end)
+
+Handlers.add('mark-flp-contract',
+  Handlers.utils.hasMatchingTag('Action', 'Mark-FLP-Contract'),
+  function(msg)
+    assert(msg.From == ao.id, 'Caller is not authorised')
+    assert(msg.Address, 'Address is required', 'Caller is not authorised')
+    FLP_CONTRACT[msg.From] = msg.Address
+    print('Marked FLP contract for rebase exclusion: ' .. msg.From)
+  end
+)
+
+Handlers.add('unmark-flp-contract',
+  Handlers.utils.hasMatchingTag('Action', 'Unmark-FLP-Contract'),
+  function(msg)
+    assert(msg.From == ao.id, 'Caller is not authorised')
+    FLP_CONTRACT = nil
+    print('Unmarked FLP contract for rebase exclusion: ' .. msg.From)
+  end
+)
