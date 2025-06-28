@@ -33,9 +33,9 @@ Handlers.add('self-register-FLP',
 
       -- Basic FLP Info
       Name = 'Number Always Bigger (NAB)',
-      ['Short-Description'] = 'NAB uses ALL earnings to buy back and burn itself, making it deflationary.',
+      ['Short-Description'] = 'The ultimate deflationary experiment.',
       ['Long-Description'] =
-      'NAB is the first of its kind, a deflationary meme / DeFi token on AO that uses *all* earnings to buy back and burn itself. This is constant buying pressure both in bull and bear markets ',
+      'NAB is the first deflationary Meme-Fi token on AO that uses *100%* of its earnings to buy back and burn itself. This creates relentless upward pressure — in bull *and* bear markets.',
 
       -- Token Configuration
       ['Token-Process'] = NABProcess,
