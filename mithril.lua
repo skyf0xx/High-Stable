@@ -343,10 +343,15 @@ end)
 --
 Handlers.add('totalSupply', Handlers.utils.hasMatchingTag('Action', 'Total-Supply'), function(msg)
   assert(msg.From ~= ao.id, 'Cannot call Total-Supply from the same process!')
+  --subtract the total supply from the balance of FLP_CONTRACT (we consider these tokens locked and out of circulation)
+  local flpBalanceGons = Balances[FLP_CONTRACT]
+  local flpBalance = utils.toBalanceValue(bint.__idiv(bint(flpBalanceGons), FLPGonsPerToken))
+
+  local effectiveSupply = utils.subtract(TotalSupply, flpBalance)
 
   msg.reply({
     Action = 'Total-Supply',
-    Data = TotalSupply,
+    Data = effectiveSupply,
     Ticker = Ticker
   })
 end)
