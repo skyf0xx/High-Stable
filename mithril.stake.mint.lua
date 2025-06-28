@@ -19,8 +19,6 @@ PERIODS_PER_MONTH = 8760                                             -- number o
 PRECISION_FACTOR = bint(10 ^ 16)                                     -- calculating emissions
 TOKEN_CONFIG_PROCESS = 'G3biaSUvclo3cd_1ErpPYt-VoSSazWrKcuBlzeLkTnU' -- token config process
 MINT_TOKEN_PROCESS = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0'   -- mint token process
-FLP_CONTRACT = FLP_CONTRACT or
-  ''                                                                 -- FLP (Fair launch) exclusion tracking for rebase protection of FLP contract
 
 local PRE_MINT = 5050
 
