@@ -63,6 +63,17 @@ function Rebase(newSupply)
 end
 
 --[[
+  Get the Gons per token value for a specific address
+]]
+local function getGonsPerTokenForAddress(address)
+  if address == FLP_CONTRACT then
+    return FLPGonsPerToken
+  else
+    return GonsPerToken
+  end
+end
+
+--[[
      Initialize State
 
      ao.id is equal to the Process.Id
@@ -97,7 +108,7 @@ if (GonsPerToken == bint.zero()) then
 end
 
 if GonsPerToken > 0 and not FLPGonsPerToken then
-  FLPGonsPerToken = GonsPerToken  --lock to current value of gons per token
+  FLPGonsPerToken = GonsPerToken --lock to current value of gons per token
 end
 
 Balances = Balances or { [ao.id] = TotalGons }
@@ -132,24 +143,27 @@ end)
 --
 Handlers.add('balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), function(msg)
   local bal = '0'
+  local targetAddress = ''
 
   -- If not Recipient is provided, then return the Senders balance
   if (msg.Tags.Recipient and Balances[msg.Tags.Recipient]) then
     bal = Balances[msg.Tags.Recipient]
+    targetAddress = msg.Tags.Recipient
   elseif msg.Tags.Target and Balances[msg.Tags.Target] then
     bal = Balances[msg.Tags.Target]
+    targetAddress = msg.Tags.Target
   elseif Balances[msg.From] then
     bal = Balances[msg.From]
+    targetAddress = msg.From
   end
 
-  local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), GonsPerToken))
-
-
+  local gonsPerToken = getGonsPerTokenForAddress(targetAddress)
+  local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), gonsPerToken))
 
   msg.reply({
     Balance = MTHBalance,
     Ticker = Ticker,
-    Account = msg.Tags.Recipient or msg.From,
+    Account = targetAddress,
     Data = MTHBalance
   })
 end)
@@ -163,8 +177,8 @@ Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
     local MTHBalances = {}
 
     for address, balance in pairs(Balances) do
-      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(balance), GonsPerToken))
-      -- Store both address and balance
+      local gonsPerToken = getGonsPerTokenForAddress(address)
+      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(balance), gonsPerToken))
       MTHBalances[address] = MTHBalance
     end
 
@@ -176,9 +190,6 @@ Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
    ]]
 --
 Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), function(msg)
-  -- Check if current time is after transfer lock period
-
-
   assert(type(msg.Recipient) == 'string', 'Recipient is required!')
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
   assert(bint.__lt(0, bint(msg.Quantity)), 'Quantity must be greater than 0')
@@ -186,8 +197,10 @@ Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), fu
   if not Balances[msg.From] then Balances[msg.From] = '0' end
   if not Balances[msg.Recipient] then Balances[msg.Recipient] = '0' end
 
-  -- internal transfer is in gons
-  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
+  -- Use sender's appropriate gons per token for conversion
+  local senderGonsPerToken = getGonsPerTokenForAddress(msg.From)
+  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * senderGonsPerToken)
+
   if bint(gonQuantity) <= bint(Balances[msg.From]) then
     Balances[msg.From] = utils.subtract(Balances[msg.From], gonQuantity)
     Balances[msg.Recipient] = utils.add(Balances[msg.Recipient], gonQuantity)
@@ -253,8 +266,9 @@ Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(m
   if not Balances[ao.id] then Balances[ao.id] = '0' end
 
   if msg.From == ao.id then
+    local gonAmount = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
     -- Add tokens to the token pool, according to Quantity
-    Balances[msg.From] = utils.add(Balances[msg.From], msg.Quantity)
+    Balances[msg.From] = utils.add(Balances[msg.From], gonAmount)
     TotalSupply = utils.add(TotalSupply, msg.Quantity)
     msg.reply({
       Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
@@ -345,7 +359,8 @@ Handlers.add('burn', Handlers.utils.hasMatchingTag('Action', 'Burn'), function(m
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
   assert(bint(msg.Quantity) <= bint(Balances[msg.From]), 'Quantity must be less than or equal to the current balance!')
 
-  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
+  local gonsPerToken = getGonsPerTokenForAddress(msg.From)
+  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * gonsPerToken)
 
   Balances[msg.From] = utils.subtract(Balances[msg.From], gonQuantity)
   TotalSupply = utils.subtract(TotalSupply, msg.Quantity)
@@ -399,8 +414,8 @@ Handlers.add('balances-from-many', Handlers.utils.hasMatchingTag('Action', 'Bala
         bal = Balances[address]
       end
 
-      -- Convert from gons to MTH balance
-      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), GonsPerToken))
+      local gonsPerToken = getGonsPerTokenForAddress(address)
+      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), gonsPerToken))
 
       -- Store the result
       results[address] = MTHBalance
