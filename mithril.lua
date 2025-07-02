@@ -116,7 +116,7 @@ Balances = Balances or { [ao.id] = TotalGons }
 Name = Name or 'Number Always Bigger'
 Ticker = Ticker or 'NAB'
 Logo = Logo or 'JrGTvRHumJaXi3Y0RKS3qOdOofTo3v6FjyzI9wSpIoY'
-FLP_CONTRACT = FLP_CONTRACT or 'MidecXBfb1pta02ns1jlRfqC59DLomvJyg0OmRmP7MY'
+FLP_CONTRACT = FLP_CONTRACT or 'X0HxJGSBzney-YLDzAtjt9Pc-c6N_1sf_MlqO0ezoeI'
 
 
 --[[
