@@ -128,12 +128,10 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
   function(msg)
     local from = msg.From
     local token = msg.Tags['Token']
-    local stakeable = AllowedTokens[token] ~= nil
     local quantity = Stakers[token][from] or '0'
     local tokenName = AllowedTokensNames[token]
 
     assert(token ~= MINT_TOKEN_PROCESS, 'MINT token cannot be unstaked')
-    assert(stakeable, 'Token: ' .. token .. ' is not stakable and was ignored!')
     assert(bint(0) < bint(quantity), 'You need to have more than zero staked tokens!')
 
     Stakers[token][from] = nil
