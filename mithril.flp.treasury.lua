@@ -19,6 +19,7 @@ Denomination = Denomination or 8
 TotalSupply = 14000000
 TotalSupplyDenominated = utils.toBalanceValue(TotalSupply * 10 ^ Denomination)
 NABProcess = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
+FLP_CONTRACT = 'X0HxJGSBzney-YLDzAtjt9Pc-c6N_1sf_MlqO0ezoeI'
 
 
 Handlers.add('self-register-FLP',
