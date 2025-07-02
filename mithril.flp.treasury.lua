@@ -68,7 +68,8 @@ Handlers.add('supply-flp-contract',
       Target = NABProcess,
       Action = 'Transfer',
       ['X-Action'] = 'Initialize-FLP',
-      Supply = TotalSupplyDenominated
+      Recipient = FLP_CONTRACT,
+      Quantity = TotalSupplyDenominated,
     }).onReply(function(reply)
       print('FLP contract supplied with initial supply')
     end)
