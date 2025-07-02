@@ -16,7 +16,7 @@ local utils = {
 }
 
 Denomination = Denomination or 8
-TotalSupply = 140000000
+TotalSupply = 14000000
 TotalSupplyDenominated = utils.toBalanceValue(TotalSupply * 10 ^ Denomination)
 NABProcess = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 
