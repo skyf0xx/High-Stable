@@ -36,6 +36,28 @@ DB = DB or sqlite3.open_memory()
 
 -- Initialize database tables
 Handlers.once(
+  'delegator-dbsetup',
+  { Action = 'Delegator-DBSetup' },
+  function(msg)
+    -- Create token stakes table
+    local response = DB:exec [[
+    CREATE TABLE IF NOT EXISTS delegator_stats (
+        total_ao_earned TEXT NOT NULL,
+        total_delegators INTEGER NOT NULL,
+        last_updated INTEGER NOT NULL
+    );
+  ]]
+
+    msg.reply({
+      Action = 'Delegator-DBSetup-Complete',
+      Data = json.encode({
+        ecosystem_response = response,
+      })
+    })
+  end
+)
+
+Handlers.once(
   'dbsetup',
   { Action = 'DBSetup' },
   function(msg)
