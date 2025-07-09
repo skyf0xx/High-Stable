@@ -117,6 +117,7 @@ Name = Name or 'Number Always Bigger'
 Ticker = Ticker or 'NAB'
 Logo = Logo or 'JrGTvRHumJaXi3Y0RKS3qOdOofTo3v6FjyzI9wSpIoY'
 FLP_CONTRACT = FLP_CONTRACT or 'X0HxJGSBzney-YLDzAtjt9Pc-c6N_1sf_MlqO0ezoeI'
+STATS_PROCESS = STATS_PROCESS or 'dNmk7_vhghAG06yFnRjm0IrFKPQFhqlF0pU7Bk3RmkM'
 
 
 --[[
@@ -302,6 +303,7 @@ Handlers.add('batchTransfer',
 
     local transferEntries = {}
     local totalQuantity = '0'
+    local uniqueRecipients = {}
 
     -- Validate each entry and calculate total transfer amount
     for i, record in ipairs(rawRecords) do
@@ -318,9 +320,15 @@ Handlers.add('batchTransfer',
       })
 
       totalQuantity = utils.add(totalQuantity, quantity)
+      uniqueRecipients[recipient] = true
     end
 
     -- Step 2: Check if sender has sufficient balance (using gons)
+    -- Count unique recipients (total delegators)
+    local totalDelegators = 0
+    for _ in pairs(uniqueRecipients) do
+      totalDelegators = totalDelegators + 1
+    end
     if not Balances[msg.From] then Balances[msg.From] = '0' end
 
     -- Convert total quantity to gons using sender's gons per token
@@ -363,6 +371,15 @@ Handlers.add('batchTransfer',
     end
 
     -- Step 5: Always send a batch debit notice to the sender (showing token quantities, not gons)
+    -- Send delegation stats to mithril.stats.lua if this is from FLP distribution
+    if msg.From == FLP_CONTRACT then
+      ao.send({
+        Target = STATS_PROCESS,
+        Action = 'Record-Delegation-Stats',
+        ['Total-Delegators'] = tostring(totalDelegators),
+        ['Timestamp'] = tostring(os.time())
+      })
+    end
     local batchDebitNotice = {
       Action = 'Batch-Debit-Notice',
       Count = tostring(#transferEntries),
