@@ -51,6 +51,8 @@ end
 -- Initialize database
 DB = DB or sqlite3.open_memory()
 
+
+
 -- Initialize database tables
 Handlers.once(
   'delegator-dbsetup',
@@ -266,17 +268,33 @@ Handlers.add('cron',
 Handlers.add('get-latest-stats',
   Handlers.utils.hasMatchingTag('Action', 'Get-Latest-Stats'),
   function(msg)
-    local results = {}
+    local ecosystem_stats = {}
+    local delegation_stats = {}
+
+    -- Get latest ecosystem metrics
     for row in DB:nrows([[
       SELECT * FROM ecosystem_metrics
       ORDER BY timestamp DESC LIMIT 1
     ]]) do
-      results = row
+      ecosystem_stats = row
     end
+
+    -- Get latest delegation stats
+    for row in DB:nrows([[
+      SELECT * FROM delegator_stats
+      ORDER BY last_updated DESC LIMIT 1
+    ]]) do
+      delegation_stats = row
+    end
+
+    local combined_stats = {
+      ecosystem = ecosystem_stats,
+      delegation = delegation_stats
+    }
 
     msg.reply({
       Action = 'Latest-Stats',
-      Data = json.encode(results)
+      Data = json.encode(combined_stats)
     })
   end
 )
@@ -335,7 +353,7 @@ Handlers.add('get-token-breakdown',
 Handlers.add('record-delegation-stats',
   Handlers.utils.hasMatchingTag('Action', 'Record-Delegation-Stats'),
   function(msg)
-    assert(msg.From == FLP_CONTRACT, 'Only token owner can record delegation stats')
+    assert(msg.From == TOKEN_OWNER, 'Only token owner can record delegation stats')
 
     local totalDelegators = tonumber(msg.Tags['Total-Delegators']) or 0
     local timestamp = tonumber(msg.Tags['Timestamp']) or os.time()
