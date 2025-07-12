@@ -63,6 +63,17 @@ function Rebase(newSupply)
 end
 
 --[[
+  Get the Gons per token value for a specific address
+]]
+local function getGonsPerTokenForAddress(address)
+  if address == FLP_CONTRACT then
+    return FLPGonsPerToken
+  else
+    return GonsPerToken
+  end
+end
+
+--[[
      Initialize State
 
      ao.id is equal to the Process.Id
@@ -96,12 +107,18 @@ if (GonsPerToken == bint.zero()) then
   Rebase(TotalSupply)
 end
 
+if GonsPerToken > 0 and not FLPGonsPerToken then
+  FLPGonsPerToken = GonsPerToken --lock to current value of gons per token
+end
 
 Balances = Balances or { [ao.id] = TotalGons }
 
 Name = Name or 'Number Always Bigger'
 Ticker = Ticker or 'NAB'
 Logo = Logo or 'JrGTvRHumJaXi3Y0RKS3qOdOofTo3v6FjyzI9wSpIoY'
+FLP_CONTRACT = FLP_CONTRACT or 'X0HxJGSBzney-YLDzAtjt9Pc-c6N_1sf_MlqO0ezoeI'
+STATS_PROCESS = STATS_PROCESS or 'dNmk7_vhghAG06yFnRjm0IrFKPQFhqlF0pU7Bk3RmkM'
+
 
 --[[
      Add handlers for each incoming Action defined by the ao Standard Token Specification
@@ -127,24 +144,27 @@ end)
 --
 Handlers.add('balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), function(msg)
   local bal = '0'
+  local targetAddress = ''
 
   -- If not Recipient is provided, then return the Senders balance
   if (msg.Tags.Recipient and Balances[msg.Tags.Recipient]) then
     bal = Balances[msg.Tags.Recipient]
+    targetAddress = msg.Tags.Recipient
   elseif msg.Tags.Target and Balances[msg.Tags.Target] then
     bal = Balances[msg.Tags.Target]
+    targetAddress = msg.Tags.Target
   elseif Balances[msg.From] then
     bal = Balances[msg.From]
+    targetAddress = msg.From
   end
 
-  local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), GonsPerToken))
-
-
+  local gonsPerToken = getGonsPerTokenForAddress(targetAddress)
+  local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), gonsPerToken))
 
   msg.reply({
     Balance = MTHBalance,
     Ticker = Ticker,
-    Account = msg.Tags.Recipient or msg.From,
+    Account = targetAddress,
     Data = MTHBalance
   })
 end)
@@ -158,8 +178,8 @@ Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
     local MTHBalances = {}
 
     for address, balance in pairs(Balances) do
-      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(balance), GonsPerToken))
-      -- Store both address and balance
+      local gonsPerToken = getGonsPerTokenForAddress(address)
+      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(balance), gonsPerToken))
       MTHBalances[address] = MTHBalance
     end
 
@@ -171,9 +191,6 @@ Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
    ]]
 --
 Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), function(msg)
-  -- Check if current time is after transfer lock period
-
-
   assert(type(msg.Recipient) == 'string', 'Recipient is required!')
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
   assert(bint.__lt(0, bint(msg.Quantity)), 'Quantity must be greater than 0')
@@ -181,8 +198,10 @@ Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), fu
   if not Balances[msg.From] then Balances[msg.From] = '0' end
   if not Balances[msg.Recipient] then Balances[msg.Recipient] = '0' end
 
-  -- internal transfer is in gons
-  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
+  -- Use sender's appropriate gons per token for conversion
+  local senderGonsPerToken = getGonsPerTokenForAddress(msg.From)
+  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * senderGonsPerToken)
+
   if bint(gonQuantity) <= bint(Balances[msg.From]) then
     Balances[msg.From] = utils.subtract(Balances[msg.From], gonQuantity)
     Balances[msg.Recipient] = utils.add(Balances[msg.Recipient], gonQuantity)
@@ -237,6 +256,174 @@ Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), fu
 end)
 
 
+
+--[[
+     Batch-Transfer
+
+     Processes multiple transfers atomically from a CSV input
+
+     The CSV format should be:
+     recipient_address,quantity
+
+     Example:
+     wallet1,100
+     wallet2,200
+
+     Features:
+     - Atomicity: Either all transfers succeed or all fail
+     - Always sends a batch debit notice to the sender
+     - Sends individual credit notices to recipients unless Cast tag is set
+     - Uses gons for internal accounting (like regular transfers)
+   ]]
+--
+Handlers.add('batchTransfer',
+  Handlers.utils.hasMatchingTag('Action', 'Batch-Transfer'),
+  function(msg)
+    --[[
+      Simple CSV parser that splits input by newlines and commas
+      to create a 2D table of values.
+    ]]
+    local function parseCSV(csvText)
+      local result = {}
+      -- Split by newlines and process each line
+      for line in csvText:gmatch('[^\r\n]+') do
+        local row = {}
+        -- Split line by commas and add each value to the row
+        for value in line:gmatch('[^,]+') do
+          table.insert(row, value)
+        end
+        table.insert(result, row)
+      end
+      return result
+    end
+
+    -- Parse CSV data and validate entries
+    local rawRecords = parseCSV(msg.Data)
+    assert(rawRecords and #rawRecords > 0, 'No transfer entries found in CSV')
+
+    local transferEntries = {}
+    local totalQuantity = '0'
+    local uniqueRecipients = {}
+
+    -- Validate each entry and calculate total transfer amount
+    for i, record in ipairs(rawRecords) do
+      local recipient = record[1]
+      local quantity = record[2]
+
+      assert(recipient and quantity, 'Invalid entry at line ' .. i .. ': recipient and quantity required')
+      assert(string.match(quantity, '^%d+$'), 'Invalid quantity format at line ' .. i .. ': must contain only digits')
+      assert(bint.ispos(bint(quantity)), 'Quantity must be greater than 0 at line ' .. i)
+
+      table.insert(transferEntries, {
+        Recipient = recipient,
+        Quantity = quantity
+      })
+
+      totalQuantity = utils.add(totalQuantity, quantity)
+      uniqueRecipients[recipient] = true
+    end
+
+    -- Step 2: Check if sender has sufficient balance (using gons)
+    -- Count unique recipients (total delegators)
+    local totalDelegators = 0
+    for _ in pairs(uniqueRecipients) do
+      totalDelegators = totalDelegators + 1
+    end
+    if not Balances[msg.From] then Balances[msg.From] = '0' end
+
+    -- Convert total quantity to gons using sender's gons per token
+    local senderGonsPerToken = getGonsPerTokenForAddress(msg.From)
+    local totalGonQuantity = utils.toBalanceValue(bint(totalQuantity) * senderGonsPerToken)
+
+    if not (bint(totalGonQuantity) <= bint(Balances[msg.From])) then
+      msg.reply({
+        Action = 'Transfer-Error',
+        ['Message-Id'] = msg.Id,
+        Error = 'Insufficient Balance!'
+      })
+      return
+    end
+
+    -- Step 3: Prepare the balance updates (in gons)
+    local balanceUpdates = {}
+
+    for _, entry in ipairs(transferEntries) do
+      local recipient = entry.Recipient
+      local quantity = entry.Quantity
+
+      if not Balances[recipient] then Balances[recipient] = '0' end
+
+      -- Convert quantity to gons using sender's gons per token
+      local gonQuantity = utils.toBalanceValue(bint(quantity) * senderGonsPerToken)
+
+      -- Aggregate multiple transfers to the same recipient (in gons)
+      if not balanceUpdates[recipient] then
+        balanceUpdates[recipient] = utils.add(Balances[recipient], gonQuantity)
+      else
+        balanceUpdates[recipient] = utils.add(balanceUpdates[recipient], gonQuantity)
+      end
+    end
+
+    -- Step 4: Apply the balance changes atomically (in gons)
+    Balances[msg.From] = utils.subtract(Balances[msg.From], totalGonQuantity)
+    for recipient, newBalance in pairs(balanceUpdates) do
+      Balances[recipient] = newBalance
+    end
+
+    -- Step 5: Always send a batch debit notice to the sender (showing token quantities, not gons)
+    -- Send delegation stats to mithril.stats.lua if this is from FLP distribution
+    if msg.From == FLP_CONTRACT then
+      ao.send({
+        Target = STATS_PROCESS,
+        Action = 'Record-Delegation-Stats',
+        ['Total-Delegators'] = tostring(totalDelegators),
+        ['Timestamp'] = tostring(os.time())
+      })
+    end
+    local batchDebitNotice = {
+      Action = 'Batch-Debit-Notice',
+      Count = tostring(#transferEntries),
+      Total = totalQuantity,
+      ['Batch-Transfer-Init-Id'] = msg.Id,
+    }
+
+    -- Forward any X- tags to the debit notice
+    for tagName, tagValue in pairs(msg.Tags) do
+      if string.sub(tagName, 1, 2) == 'X-' then
+        batchDebitNotice[tagName] = tagValue
+      end
+    end
+
+    msg.reply(batchDebitNotice)
+
+    -- Step 6: Send individual credit notices if Cast tag is not set (showing token quantities, not gons)
+    if not msg.Cast then
+      for _, entry in ipairs(transferEntries) do
+        local creditNotice = {
+          Target = entry.Recipient,
+          Action = 'Credit-Notice',
+          Sender = msg.From,
+          Quantity = entry.Quantity,
+          Data = Colors.gray ..
+            'You received ' ..
+            Colors.blue .. entry.Quantity .. Colors.gray .. ' from ' .. Colors.green .. msg.From .. Colors.reset
+        }
+
+        -- Forward any X- tags to the credit notices
+        for tagName, tagValue in pairs(msg.Tags) do
+          if string.sub(tagName, 1, 2) == 'X-' then
+            creditNotice[tagName] = tagValue
+          end
+        end
+
+        ao.send(creditNotice)
+      end
+    end
+  end
+)
+
+
+
 --[[
     Standard Mint
    ]]
@@ -248,8 +435,9 @@ Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(m
   if not Balances[ao.id] then Balances[ao.id] = '0' end
 
   if msg.From == ao.id then
+    local gonAmount = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
     -- Add tokens to the token pool, according to Quantity
-    Balances[msg.From] = utils.add(Balances[msg.From], msg.Quantity)
+    Balances[msg.From] = utils.add(Balances[msg.From], gonAmount)
     TotalSupply = utils.add(TotalSupply, msg.Quantity)
     msg.reply({
       Data = Colors.gray .. 'Successfully minted ' .. Colors.blue .. msg.Quantity .. Colors.reset
@@ -324,10 +512,14 @@ end)
 --
 Handlers.add('totalSupply', Handlers.utils.hasMatchingTag('Action', 'Total-Supply'), function(msg)
   assert(msg.From ~= ao.id, 'Cannot call Total-Supply from the same process!')
+  --subtract the total supply from the balance of FLP_CONTRACT (we consider these tokens locked and out of circulation)
+  local flpBalanceGons = Balances[FLP_CONTRACT] or '0'
+  local flpBalance = utils.toBalanceValue(bint.__idiv(bint(flpBalanceGons), FLPGonsPerToken))
+  local effectiveSupply = utils.subtract(TotalSupply, flpBalance)
 
   msg.reply({
     Action = 'Total-Supply',
-    Data = TotalSupply,
+    Data = effectiveSupply,
     Ticker = Ticker
   })
 end)
@@ -340,7 +532,8 @@ Handlers.add('burn', Handlers.utils.hasMatchingTag('Action', 'Burn'), function(m
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
   assert(bint(msg.Quantity) <= bint(Balances[msg.From]), 'Quantity must be less than or equal to the current balance!')
 
-  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * GonsPerToken)
+  local gonsPerToken = getGonsPerTokenForAddress(msg.From)
+  local gonQuantity = utils.toBalanceValue(bint(msg.Quantity) * gonsPerToken)
 
   Balances[msg.From] = utils.subtract(Balances[msg.From], gonQuantity)
   TotalSupply = utils.subtract(TotalSupply, msg.Quantity)
@@ -394,8 +587,8 @@ Handlers.add('balances-from-many', Handlers.utils.hasMatchingTag('Action', 'Bala
         bal = Balances[address]
       end
 
-      -- Convert from gons to MTH balance
-      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), GonsPerToken))
+      local gonsPerToken = getGonsPerTokenForAddress(address)
+      local MTHBalance = utils.toBalanceValue(bint.__idiv(bint(bal), gonsPerToken))
 
       -- Store the result
       results[address] = MTHBalance
@@ -407,3 +600,22 @@ Handlers.add('balances-from-many', Handlers.utils.hasMatchingTag('Action', 'Bala
       Ticker = Ticker
     })
   end)
+
+Handlers.add('mark-flp-contract',
+  Handlers.utils.hasMatchingTag('Action', 'Mark-FLP-Contract'),
+  function(msg)
+    assert(msg.From == ao.id, 'Caller is not authorised')
+    assert(msg.Address, 'Address is required', 'Caller is not authorised')
+    FLP_CONTRACT[msg.From] = msg.Address
+    print('Marked FLP contract for rebase exclusion: ' .. msg.From)
+  end
+)
+
+Handlers.add('unmark-flp-contract',
+  Handlers.utils.hasMatchingTag('Action', 'Unmark-FLP-Contract'),
+  function(msg)
+    assert(msg.From == ao.id, 'Caller is not authorised')
+    FLP_CONTRACT = nil
+    print('Unmarked FLP contract for rebase exclusion: ' .. msg.From)
+  end
+)

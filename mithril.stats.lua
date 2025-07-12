@@ -1,6 +1,7 @@
 local sqlite3 = require('lsqlite3')
 local json = require('json')
 local ao = require('ao')
+local bint = require('.bint')(256)
 
 -- Constants for interacting with other processes
 local STAKE_MINT_PROCESS = 'KbUW8wkZmiEWeUG0-K8ohSO82TfTUdz6Lqu5nxDoQDc'
@@ -11,6 +12,22 @@ local TOKEN_DENOMINATION = 8
 local PRICE_DENOMINATION = 6
 
 local TRUSTED_CRON = 'iAEDZ6Y_wpEcksEzypVYhI01ShQIHCIvwEQ7NA3-2KA'
+local FLP_CONTRACT = 'X0HxJGSBzney-YLDzAtjt9Pc-c6N_1sf_MlqO0ezoeI'
+
+local utils = {
+  add = function(a, b)
+    return tostring(bint(a) + bint(b))
+  end,
+  subtract = function(a, b)
+    return tostring(bint(a) - bint(b))
+  end,
+  toBalanceValue = function(a)
+    return tostring(bint(a))
+  end,
+  toNumber = function(a)
+    return tonumber(a)
+  end
+}
 
 -- Helper function to convert for calculations and return string
 local function convertTokenAmount(amount)
@@ -34,7 +51,31 @@ end
 -- Initialize database
 DB = DB or sqlite3.open_memory()
 
+
+
 -- Initialize database tables
+Handlers.once(
+  'delegator-dbsetup',
+  { Action = 'Delegator-DBSetup' },
+  function(msg)
+    -- Create token stakes table
+    local response = DB:exec [[
+    CREATE TABLE IF NOT EXISTS delegator_stats (
+        total_ao_earned TEXT NOT NULL,
+        total_delegators INTEGER NOT NULL,
+        last_updated INTEGER NOT NULL
+    );
+  ]]
+
+    msg.reply({
+      Action = 'Delegator-DBSetup-Complete',
+      Data = json.encode({
+        ecosystem_response = response,
+      })
+    })
+  end
+)
+
 Handlers.once(
   'dbsetup',
   { Action = 'DBSetup' },
@@ -227,17 +268,33 @@ Handlers.add('cron',
 Handlers.add('get-latest-stats',
   Handlers.utils.hasMatchingTag('Action', 'Get-Latest-Stats'),
   function(msg)
-    local results = {}
+    local ecosystem_stats = {}
+    local delegation_stats = {}
+
+    -- Get latest ecosystem metrics
     for row in DB:nrows([[
       SELECT * FROM ecosystem_metrics
       ORDER BY timestamp DESC LIMIT 1
     ]]) do
-      results = row
+      ecosystem_stats = row
     end
+
+    -- Get latest delegation stats
+    for row in DB:nrows([[
+      SELECT * FROM delegator_stats
+      ORDER BY last_updated DESC LIMIT 1
+    ]]) do
+      delegation_stats = row
+    end
+
+    local combined_stats = {
+      ecosystem = ecosystem_stats,
+      delegation = delegation_stats
+    }
 
     msg.reply({
       Action = 'Latest-Stats',
-      Data = json.encode(results)
+      Data = json.encode(combined_stats)
     })
   end
 )
@@ -289,5 +346,41 @@ Handlers.add('get-token-breakdown',
       Action = 'Token-Breakdown',
       Data = json.encode(results)
     })
+  end
+)
+
+-- Record Delegation Stats
+Handlers.add('record-delegation-stats',
+  Handlers.utils.hasMatchingTag('Action', 'Record-Delegation-Stats'),
+  function(msg)
+    assert(msg.From == TOKEN_OWNER, 'Only token owner can record delegation stats')
+
+    local totalDelegators = tonumber(msg.Tags['Total-Delegators']) or 0
+    local timestamp = tonumber(msg.Tags['Timestamp']) or os.time()
+
+    -- Get total AO earned from FLP contract
+    Send({
+      Target = FLP_CONTRACT,
+      Action = 'Info'
+    }).onReply(function(flpReply)
+      local accumulatedAo = flpReply.Tags['Accumulated-Quantity'] or '0'
+      local exchangedForPi = flpReply.Tags['Exchanged-For-Pi-Quantity'] or '0'
+      local totalAoEarned = utils.add(accumulatedAo, exchangedForPi)
+
+      -- Update stats table (overwrites existing data)
+      DB:exec('DELETE FROM delegator_stats')
+
+      local stmt = DB:prepare([[
+        INSERT INTO delegator_stats (
+          total_ao_earned, total_delegators, last_updated
+        ) VALUES (?, ?, ?)
+      ]])
+
+      stmt:bind_values(totalAoEarned, totalDelegators, timestamp)
+      stmt:step()
+      stmt:finalize()
+
+      print('Updated stats: AO earned = ' .. totalAoEarned .. ', Delegators = ' .. totalDelegators)
+    end)
   end
 )

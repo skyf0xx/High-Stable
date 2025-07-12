@@ -12,6 +12,7 @@ mithril.policy.lua --> "NAB Policy Handler" (iWO6lWYAFWUahdCa3PJKbg_ACagDur3RR1o
 mithril.stake.mint.lua --> "NAB Stake and Mint" (KbUW8wkZmiEWeUG0-K8ohSO82TfTUdz6Lqu5nxDoQDc)
 mithril.allowed.tokens.lua --> "NAB Allowed Tokens" (G3biaSUvclo3cd_1ErpPYt-VoSSazWrKcuBlzeLkTnU)
 mithril.stats.lua --> "NAB Ecosystem Stats" (dNmk7_vhghAG06yFnRjm0IrFKPQFhqlF0pU7Bk3RmkM) NOTE: Uses WASM 64 sqlite first init is with --module=ghSkge2sIUD_F00ym5sEimC63BDBuBrq4b5OcwxOjiw
+mithril.flp.treasury.lua --> "NAB Fair-Launch Treasury" (NSX-Z920BtJ5J_Cjrj90DJ6yuaMbAznGIVaSOcWzyyA)
 
 CRONS
 cron.caller.stakers.lua --> "NAB Staking Reward Cron" (h7nm30_3nDfMrN5TRdEC80ZIUzQl-fIWWxobwews4WE) every 5 minutes

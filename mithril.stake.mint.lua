@@ -14,7 +14,7 @@ end
 CRON_CALLER = 'h7nm30_3nDfMrN5TRdEC80ZIUzQl-fIWWxobwews4WE'
 TOKEN_OWNER = 'OsK9Vgjxo0ypX_HLz2iJJuh4hp3I80yA9KArsJjIloU'
 TOTAL_SUPPLY = 21000000 * 10 ^ 8                                     -- 21M tokens with 8 decimal places
-EMISSION_RATE_PER_MONTH = 0.01425                                    -- 1.425% monthly rate
+EMISSION_RATE_PER_MONTH = 0.007125                                   -- was 0.01425 (1.425%) but fair launch is no doing 50% of it -- 1.425% monthly rate
 PERIODS_PER_MONTH = 8760                                             -- number of 5-minute periods in a month (43800/5)
 PRECISION_FACTOR = bint(10 ^ 16)                                     -- calculating emissions
 TOKEN_CONFIG_PROCESS = 'G3biaSUvclo3cd_1ErpPYt-VoSSazWrKcuBlzeLkTnU' -- token config process
@@ -128,12 +128,10 @@ Handlers.add('unstake', Handlers.utils.hasMatchingTag('Action', 'Unstake'),
   function(msg)
     local from = msg.From
     local token = msg.Tags['Token']
-    local stakeable = AllowedTokens[token] ~= nil
     local quantity = Stakers[token][from] or '0'
     local tokenName = AllowedTokensNames[token]
 
     assert(token ~= MINT_TOKEN_PROCESS, 'MINT token cannot be unstaked')
-    assert(stakeable, 'Token: ' .. token .. ' is not stakable and was ignored!')
     assert(bint(0) < bint(quantity), 'You need to have more than zero staked tokens!')
 
     Stakers[token][from] = nil
