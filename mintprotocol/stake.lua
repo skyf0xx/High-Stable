@@ -210,7 +210,7 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
     )
 
     -- Fixed maximum amount (in MINT) - use reasonable limit for main MINT
-    local maxAmount = '100000000' -- 100,000,000 for main MINT tokens
+    local maxAmount = '10000000'
     local fixedMaxAmount = maxAmount
 
     -- Use the smaller of the two thresholds
