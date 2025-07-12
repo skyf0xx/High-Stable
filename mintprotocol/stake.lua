@@ -177,6 +177,36 @@ local function fundTestStake(opId, token, quantity, amm, adjustedMintAmount)
   end)
 end
 
+local function failAndRefund(opId, sender, token, quantity, lockInfo, lockDuration, errorReason, clientOperationId)
+  -- Fail the operation
+  operations.fail(opId, errorReason)
+
+  -- Log the rejection due to lock
+  utils.logEvent('StakeRejectedDueToLock', {
+    sender = sender,
+    token = token,
+    tokenName = config.AllowedTokensNames[token],
+    amount = quantity,
+    lockedBy = lockInfo.lockedBy,
+    lockDuration = lockDuration,
+    operationId = opId,
+    clientOperationId = clientOperationId,
+    status = 'failed',
+    error = errorReason
+  })
+
+  -- Refund the tokens to the user with a friendly message
+  Send({
+    Target = token,
+    Action = 'Transfer',
+    Recipient = sender,
+    Quantity = quantity,
+    ['X-Refund-Reason'] = errorReason,
+    ['X-Error'] = 'Please try again in a few moments',
+    ['X-Client-Operation-ID'] = clientOperationId,
+    ['X-Operation-Id'] = opId
+  })
+end
 local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
   -- Verify operation exists and is in pending state
   security.verifyOperation(opId, 'stake', 'pending')
@@ -271,6 +301,11 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
         })
 
         state.unlockTokenForStaking(token)
+        local lockInfo = state.getTokenLockInfo(token)
+        local lockDuration = os.time() - lockInfo.lockedAt
+        local errorReason = 'MINT Token transfer failed'
+        failAndRefund(opId, operation.sender, token, quantity, lockInfo, lockDuration, errorReason,
+          operation.clientOperationId)
         return
       end
 
@@ -353,34 +388,7 @@ stake.handlers = {
       local lockDuration = os.time() - lockInfo.lockedAt
       local errorReason = 'Token is currently being staked by another user'
 
-      -- Fail the operation
-      operations.fail(opId, errorReason)
-
-      -- Log the rejection due to lock
-      utils.logEvent('StakeRejectedDueToLock', {
-        sender = sender,
-        token = token,
-        tokenName = config.AllowedTokensNames[token],
-        amount = quantity,
-        lockedBy = lockInfo.lockedBy,
-        lockDuration = lockDuration,
-        operationId = opId,
-        clientOperationId = clientOperationId,
-        status = 'failed',
-        error = errorReason
-      })
-
-      -- Refund the tokens to the user with a friendly message
-      Send({
-        Target = token,
-        Action = 'Transfer',
-        Recipient = sender,
-        Quantity = quantity,
-        ['X-Refund-Reason'] = errorReason,
-        ['X-Error'] = 'Please try again in a few moments',
-        ['X-Client-Operation-ID'] = clientOperationId,
-        ['X-Operation-Id'] = opId
-      })
+      failAndRefund(opId, sender, token, quantity, lockInfo, lockDuration, errorReason, clientOperationId)
 
       return
     end
