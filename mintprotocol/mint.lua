@@ -322,3 +322,66 @@ Handlers.add('rebase', Handlers.utils.hasMatchingTag('Action', 'Rebase'),
         Colors.blue .. msg.NewSupply .. Colors.reset
     })
   end)
+
+
+--[[
+  Supply Reduction Handler
+  Reduces total supply from ~18.1B to ~50M tokens
+]] --
+BackupBalances = {}
+
+--[[
+  Supply Reduction Handler
+  Reduces total supply from ~18.1B to ~50M tokens
+]] --
+Handlers.add('reduce-supply', Handlers.utils.hasMatchingTag('Action', 'Reduce-Supply'),
+  function(msg)
+    assert(msg.From == ao.id, 'Only the process owner can reduce supply!')
+
+    for address, balanceGon in pairs(Balances) do
+      BackupBalances[address] = balanceGon
+    end
+
+    -- Calculate reduction factor: ~18.1B to ~50M
+    local currentSupply = TotalSupply
+    local targetSupply = '5000000000000000' -- 50M tokens with 8 decimals
+    local reductionFactor = bint.__idiv(bint(currentSupply), bint(targetSupply))
+
+    -- Minimum balance threshold (1 full token = 10^8)
+    local minBalanceGon = utils.toBalanceValue(bint(10 ^ Denomination) * GonsPerToken)
+
+    local newTotalSupply = '0'
+
+    -- Process each balance
+    for address, balanceGon in pairs(Balances) do
+      -- Convert gons to display tokens
+      local currentTokens = bint.__idiv(bint(balanceGon), GonsPerToken)
+
+      -- Reduce by factor
+      local newTokens = bint.__idiv(currentTokens, reductionFactor)
+
+      -- Convert to gons for comparison
+      local newBalanceGon = utils.toBalanceValue(bint(newTokens) * GonsPerToken)
+
+      -- Apply minimum balance rule
+      if bint(newBalanceGon) < bint(minBalanceGon) and bint(newBalanceGon) > bint.zero() then
+        newBalanceGon = minBalanceGon                       -- Set to 1 full token in gons
+        newTokens = utils.toBalanceValue(10 ^ Denomination) -- Update tokens too
+      end
+      Balances[address] = newBalanceGon
+
+      -- Add to new total supply
+      newTotalSupply = utils.add(newTotalSupply, utils.toBalanceValue(newTokens))
+    end
+
+    -- Update total supply
+    TotalSupply = newTotalSupply
+
+    msg.reply({
+      Action = 'Supply-Reduced',
+      Data = Colors.gray .. 'Supply reduced from ' .. Colors.blue .. currentSupply ..
+        Colors.gray .. ' to ' .. Colors.blue .. TotalSupply .. Colors.reset,
+      BackupCreated = 'true',
+      ReductionFactor = tostring(reductionFactor)
+    })
+  end)
