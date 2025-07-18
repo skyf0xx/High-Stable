@@ -177,6 +177,36 @@ local function fundTestStake(opId, token, quantity, amm, adjustedMintAmount)
   end)
 end
 
+local function failAndRefund(opId, sender, token, quantity, lockInfo, lockDuration, errorReason, clientOperationId)
+  -- Fail the operation
+  operations.fail(opId, errorReason)
+
+  -- Log the rejection due to lock
+  utils.logEvent('StakeRejectedDueToLock', {
+    sender = sender,
+    token = token,
+    tokenName = config.AllowedTokensNames[token],
+    amount = quantity,
+    lockedBy = lockInfo.lockedBy,
+    lockDuration = lockDuration,
+    operationId = opId,
+    clientOperationId = clientOperationId,
+    status = 'failed',
+    error = errorReason
+  })
+
+  -- Refund the tokens to the user with a friendly message
+  Send({
+    Target = token,
+    Action = 'Transfer',
+    Recipient = sender,
+    Quantity = quantity,
+    ['X-Refund-Reason'] = errorReason,
+    ['X-Error'] = 'Please try again in a few moments',
+    ['X-Client-Operation-ID'] = clientOperationId,
+    ['X-Operation-Id'] = opId
+  })
+end
 local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
   -- Verify operation exists and is in pending state
   security.verifyOperation(opId, 'stake', 'pending')
@@ -187,27 +217,66 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
   -- Get the operation details
   local operation = operations.get(opId)
 
-  -- MINT tokens needed for this stake
+  -- Check MINT balance in treasury
   Send({
     Target = mintToken,
-    Action = 'Mint',
-    Quantity = adjustedMintAmount
-  }).onReply(function(mintReply)
-    utils.logEvent('MintedForStake', {
-      sender = operation.sender,
-      details = mintReply.Data,
-      token = token,
-      tokenName = config.AllowedTokensNames[token],
-      mintToken = mintToken,
-      amount = quantity,
-      operationId = opId,
-      clientOperationId = operation.clientOperationId
-    })
+    Action = 'Balance',
+    Recipient = ao.id -- The contract itself acts as the treasury
+  }).onReply(function(balanceReply)
+    local mintTreasuryBalance = balanceReply.Balance or '0'
+
+    -- Get the number of decimal places for the MINT token
+    local mintDecimals = config.TOKEN_DECIMALS[mintToken]
+
+    -- Trim the balance and adjusted amount to integer parts
+    local trimmedBalance = trimToIntegerPart(mintTreasuryBalance, mintDecimals)
+    local trimmedAdjustedAmount = trimToIntegerPart(adjustedMintAmount, mintDecimals)
+
+    -- Calculate threshold based on percentage of treasury
+    local percentThreshold = '10' -- 10% of treasury
+    local percentageBased = utils.math.divide(
+      utils.math.multiply(trimmedBalance, percentThreshold),
+      '100'
+    )
+
+    -- Fixed maximum amount (in MINT) - use reasonable limit for main MINT
+    local maxAmount = '10000000'
+    local fixedMaxAmount = maxAmount
+
+    -- Use the smaller of the two thresholds
+    local threshold = utils.math.isLessThan(percentageBased, fixedMaxAmount)
+      and percentageBased
+      or fixedMaxAmount
+
+    -- Determine the actual amount to use (cap if necessary)
+    local actualMintAmount = adjustedMintAmount
+
+    -- Cap the amount if it exceeds threshold
+    if utils.math.isGreaterThan(trimmedAdjustedAmount, threshold) then
+      -- Convert threshold back to full precision
+      actualMintAmount = utils.math.multiply(threshold, tostring(10 ^ mintDecimals))
+
+      -- Log that we're capping the amount
+      utils.logEvent('StakeAmountCapped', {
+        sender = operation.sender,
+        token = token,
+        tokenName = config.AllowedTokensNames[token],
+        mintToken = mintToken,
+        requestedAmount = adjustedMintAmount,
+        cappedAmount = actualMintAmount,
+        threshold = threshold,
+        operationId = opId,
+        clientOperationId = operation.clientOperationId
+      })
+    end
+
+    -- Proceed with funding the stake using treasury (amount is already capped to safe limits)
+    -- Transfer MINT to the AMM from our treasury (no more minting!)
     Send({
       Target = mintToken,
       Action = 'Transfer',
       Recipient = amm,
-      Quantity = adjustedMintAmount, -- Use the original full amount for transfer
+      Quantity = actualMintAmount, -- Use the potentially capped amount
       ['X-Action'] = 'Provide',
       ['X-Slippage-Tolerance'] = config.SLIPPAGE_TOLERANCE,
       ['X-Operation-Id'] = opId,
@@ -231,9 +300,12 @@ local function fundStake(opId, token, quantity, amm, adjustedMintAmount)
           clientOperationId = operation.clientOperationId
         })
 
-
-        -- No need to transfer user's tokens since the operation failed
         state.unlockTokenForStaking(token)
+        local lockInfo = state.getTokenLockInfo(token)
+        local lockDuration = os.time() - lockInfo.lockedAt
+        local errorReason = 'MINT Token transfer failed'
+        failAndRefund(opId, operation.sender, token, quantity, lockInfo, lockDuration, errorReason,
+          operation.clientOperationId)
         return
       end
 
@@ -316,34 +388,7 @@ stake.handlers = {
       local lockDuration = os.time() - lockInfo.lockedAt
       local errorReason = 'Token is currently being staked by another user'
 
-      -- Fail the operation
-      operations.fail(opId, errorReason)
-
-      -- Log the rejection due to lock
-      utils.logEvent('StakeRejectedDueToLock', {
-        sender = sender,
-        token = token,
-        tokenName = config.AllowedTokensNames[token],
-        amount = quantity,
-        lockedBy = lockInfo.lockedBy,
-        lockDuration = lockDuration,
-        operationId = opId,
-        clientOperationId = clientOperationId,
-        status = 'failed',
-        error = errorReason
-      })
-
-      -- Refund the tokens to the user with a friendly message
-      Send({
-        Target = token,
-        Action = 'Transfer',
-        Recipient = sender,
-        Quantity = quantity,
-        ['X-Refund-Reason'] = errorReason,
-        ['X-Error'] = 'Please try again in a few moments',
-        ['X-Client-Operation-ID'] = clientOperationId,
-        ['X-Operation-Id'] = opId
-      })
+      failAndRefund(opId, sender, token, quantity, lockInfo, lockDuration, errorReason, clientOperationId)
 
       return
     end
@@ -403,6 +448,8 @@ stake.handlers = {
         tokenReserve = tokenReserve,
         clientOperationId = clientOperationId
       })
+
+      ---
 
       -- Call the appropriate funding function based on mintToken
       if mintToken == config.MINT_TESTNET_TOKEN then
