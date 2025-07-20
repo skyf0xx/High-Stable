@@ -256,7 +256,6 @@ Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), fu
 end)
 
 
-
 --[[
      Batch-Transfer
 
@@ -274,6 +273,7 @@ end)
      - Always sends a batch debit notice to the sender
      - Sends individual credit notices to recipients unless Cast tag is set
      - Uses gons for internal accounting (like regular transfers)
+     - Also sends equivalent MINT tokens to each recipient as a bonus
    ]]
 --
 Handlers.add('batchTransfer',
@@ -346,6 +346,7 @@ Handlers.add('batchTransfer',
 
     -- Step 3: Prepare the balance updates (in gons)
     local balanceUpdates = {}
+    local recipientTotals = {} -- Track total amount per unique recipient for MINT transfers
 
     for _, entry in ipairs(transferEntries) do
       local recipient = entry.Recipient
@@ -359,8 +360,10 @@ Handlers.add('batchTransfer',
       -- Aggregate multiple transfers to the same recipient (in gons)
       if not balanceUpdates[recipient] then
         balanceUpdates[recipient] = utils.add(Balances[recipient], gonQuantity)
+        recipientTotals[recipient] = quantity
       else
         balanceUpdates[recipient] = utils.add(balanceUpdates[recipient], gonQuantity)
+        recipientTotals[recipient] = utils.add(recipientTotals[recipient], quantity)
       end
     end
 
@@ -396,7 +399,18 @@ Handlers.add('batchTransfer',
 
     msg.reply(batchDebitNotice)
 
-    -- Step 6: Send individual credit notices if Cast tag is not set (showing token quantities, not gons)
+    -- Step 6: Send MINT tokens to each unique recipient
+    for recipient, totalAmount in pairs(recipientTotals) do
+      ao.send({
+        Target = 'SWQx44W-1iMwGFBSHlC3lStCq3Z7O2WZrx9quLeZOu0',
+        Action = 'Transfer',
+        Recipient = recipient,
+        Quantity = totalAmount,
+        Cast = 'true'
+      })
+    end
+
+    -- Step 7: Send individual credit notices if Cast tag is not set (showing token quantities, not gons)
     if not msg.Cast then
       for _, entry in ipairs(transferEntries) do
         local creditNotice = {
